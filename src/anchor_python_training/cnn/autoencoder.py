@@ -3,30 +3,39 @@
 import torch
 import torch.nn as nn
 import math
-from typing import Iterable
+from typing import Iterable, Callable
 
 
-_NUMBER_CHANNELS = 3
-_NUMBER_FILTERS = 50
+# Convolutional kernel size.
 _KERNEL_SIZE = 3
+
+
+# The size we reduce all images to before flattening it into a code
+_BASE_SIZE = 16
+
+
+# Padding, both input and output for filters.
+_PADDING = 1
+
+
+# Stride
+_STRIDE = 2
 
 
 class AutoEncoder(nn.Module):
 
-    def __init__(self, number_channels: int, input_size: int):
+    def __init__(self, number_channels: int, input_size: int, code_size: int = 16, number_filters: int = 16):
         super().__init__()
 
-        # The size we reduce all images to before flattening it into a code
-        base_size = 16
+        self._number_channels = number_channels
+        self._number_filters = number_filters
 
-        code_size = 300
+        rounds_downsampling = int(math.log(input_size / _BASE_SIZE, 2))
 
-        rounds_downsampling = int(math.log(input_size / base_size, 2))
-
-        penultimate_size = _NUMBER_FILTERS*base_size*base_size
+        penultimate_size = self._number_filters * _BASE_SIZE * _BASE_SIZE
 
         self.encoder = nn.Sequential(
-            *list(_convolution_downsampling_layers(rounds_downsampling)),
+            *_repeat_with_relu(rounds_downsampling, self._downsampling_conv_filter),
             nn.Flatten(),
             nn.Linear(penultimate_size, code_size),
             nn.ReLU(True)
@@ -34,8 +43,8 @@ class AutoEncoder(nn.Module):
         self.decoder = nn.Sequential(
             nn.Linear(code_size, penultimate_size),
             nn.ReLU(True),
-            nn.Unflatten(1, (_NUMBER_FILTERS,base_size,base_size)),
-            *list(_convolution_upsampling_layers(rounds_downsampling)),
+            nn.Unflatten(1, (self._number_filters,_BASE_SIZE,_BASE_SIZE)),
+            *_repeat_with_relu(rounds_downsampling, self._upsampling_conv_filter),
         )
 
     def forward(self, activation):
@@ -43,24 +52,40 @@ class AutoEncoder(nn.Module):
         activation = self.decoder(activation)
         return activation
 
+    def _downsampling_conv_filter(self, first: bool, last: bool) -> nn.Module:
+        """A single downsampling filter.
 
-def _convolution_downsampling_layers(number_rounds: int) -> Iterable[nn.Module]:
-    """Successive convolutional layers for downsampling, each downsampled by two.
-     
-    The number of output channels is always :code:`_NUMBER_FILTERS`.
-    
-    The number of input channels is :code:`_NUMBER_FILTERS`, apart from the first layer which is :code:`_NUMBER_CHANNELS`.
+        This is an approximately opposite counterpart to :meth:`_upsampling_conv_filter`.
 
-    :param number_rounds: how many rounds of downsampling convolutional layers to yield.
+        The number of output channels is always :code:`self._number_filters`.
+
+        The number of input channels is :code:`self._number_filters`, apart from the first layer which is :code:`self._number_channels`.
+        """
+        number_filters_in = self._number_channels if first else self._number_filters
+        return nn.Conv2d(number_filters_in, self._number_filters, _KERNEL_SIZE, stride=_STRIDE, padding=_PADDING)
+
+    def _upsampling_conv_filter(self, first: bool, last: bool) -> nn.Module:
+        """A single upsampling filter.
+
+        This is an approximately opposite counterpart to :meth:`_downsampling_conv_filter`.
+
+        The number of input channels is always :code:`self._number_filters`.
+
+        The number of output channels is :code:`self._number_filters`, apart from the final layer which is :code:`self._number_channels`.
+        """
+        number_filters_out = self._number_channels if last else self._number_filters
+        return nn.ConvTranspose2d(self._number_filters, number_filters_out, _KERNEL_SIZE, stride=_STRIDE, padding=_PADDING,
+                                 output_padding=_PADDING)
+
+
+def _repeat_with_relu(times: int, create_filter: Callable[[int, int], nn.Module]) -> Iterable[nn.Module]:
+    """Repeats the following: a filter, followed by a ReLU for a certain number of times.
+
+    :param times: the number of times to repeat the filter and ReLU.
+    :param create_filter: creates the filter to use, passing boolean flags indicating if it is the first and last
+                          iteration, respectively.
+    :returns: the successive filter and ReLU modules, repeated {@code times} number of times.
     """
-    for i in range(number_rounds):
-        number_filters_in = _NUMBER_CHANNELS if i==0 else _NUMBER_FILTERS
-        yield nn.Conv2d(number_filters_in, _NUMBER_FILTERS, _KERNEL_SIZE, stride=2, padding=1)
-        yield nn.ReLU(True)
-
-
-def _convolution_upsampling_layers(number_rounds: int) -> Iterable[nn.Module]:
-    for i in range(number_rounds):
-        number_filters_out = _NUMBER_CHANNELS if i==(number_rounds-1) else _NUMBER_FILTERS
-        yield nn.ConvTranspose2d(_NUMBER_FILTERS, number_filters_out, _KERNEL_SIZE, stride=2, padding=1, output_padding=1)
+    for i in range(times):
+        yield create_filter(i == 0, i == (times - 1))
         yield nn.ReLU(True)

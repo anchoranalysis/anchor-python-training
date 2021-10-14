@@ -26,7 +26,7 @@ def main():
     print(torchinfo.summary(model, (8, 3, input_size, input_size)))
     print(model)
 
-    train.train_model(train_data, validation_data, model, loss=nn.MSELoss(), epochs=500)
+    train.train_model(train_data, validation_data, model, loss=nn.MSELoss(), epochs=50)
 
     model = model.to(torch.device("cpu"))
     _plot_reconstruction_on_samples(validation_data, model)
