@@ -1,3 +1,3 @@
 """CNN models."""
 
-from .autoencoder import AutoEncoder
+from .autoencoder import AutoEncoder  # noqa: F401

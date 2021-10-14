@@ -4,10 +4,15 @@
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import Callable, Iterable
+from typing import Iterable
 
 
-def plot_images_two_rows(top: Iterable[np.ndarray], bottom: Iterable[np.ndarray], row_size: int = 10, figure_size=(20, 4)) -> None:
+def plot_images_two_rows(
+    top: Iterable[np.ndarray],
+    bottom: Iterable[np.ndarray],
+    row_size: int = 10,
+    figure_size=(20, 4),
+) -> None:
     """Plot a top-row of images, alongside a bottom-row of images.
 
     :param top: the images on the top-row. There must be at least :code:row_size: elements.

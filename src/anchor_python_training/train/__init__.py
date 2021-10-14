@@ -1,3 +1,3 @@
 """"Training models against data."""
 
-from .model import train_model
+from .model import train_model  # noqa: F401

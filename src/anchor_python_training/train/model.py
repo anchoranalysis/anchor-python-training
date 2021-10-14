@@ -1,7 +1,6 @@
 """Trains a neural-network model against training-data"""
 
 import torch
-import torch.nn as nn
 import torch.optim as optim
 
 from typing import Optional
@@ -14,25 +13,25 @@ def train_model(
     loss: torch.nn.Module,
     epochs: int = 100,
     learning_rate: float = 1e-3,
-    seed: Optional[int] = None
+    seed: Optional[int] = None,
 ) -> None:
     """Trains a model against training-data and reports incrementally on loss.
 
-     The loss is reported for both training-data and validation-data.
+    The loss is reported for both training-data and validation-data.
 
-     An ADAM optimizer is used for training.
+    An ADAM optimizer is used for training.
 
-     :param train_data: the data to use for training.
-     :param validation_data: the validation data to also report metrics for, at each epoch.
-     :param model: the model to train, whose state will be incrementally updated each epoch.
-     :param loss: the loss-function that will be minimized during training.
-     :param epochs: the number of epochs to train for.
-     :param learning_rate: the learning-rate to use when training.
-     :param seed: an optional seed for the random-number generator, which if set, tries to make training as
-                  deterministic as possible, as per `PyTorch's Reproducibility`_.
+    :param train_data: the data to use for training.
+    :param validation_data: the validation data to also report metrics for, at each epoch.
+    :param model: the model to train, whose state will be incrementally updated each epoch.
+    :param loss: the loss-function that will be minimized during training.
+    :param epochs: the number of epochs to train for.
+    :param learning_rate: the learning-rate to use when training.
+    :param seed: an optional seed for the random-number generator, which if set, tries to make training as
+                 deterministic as possible, as per `PyTorch's Reproducibility`_.
 
-     :: _PyTorch's Reproducibility: https://pytorch.org/docs/stable/notes/randomness.html
-     """
+    :: _PyTorch's Reproducibility: https://pytorch.org/docs/stable/notes/randomness.html
+    """
     _setup_backend(seed)
 
     device = _select_device()
@@ -49,10 +48,20 @@ def train_model(
         # Average loss across the number of training-samples
         loss_for_epoch = loss_for_epoch / len(train_data)
 
-        print("epoch : {}/{}, recon loss = {:.8f}".format(epoch + 1, epochs, loss_for_epoch))
+        print(
+            "epoch : {}/{}, recon loss = {:.8f}".format(
+                epoch + 1, epochs, loss_for_epoch
+            )
+        )
 
 
-def _pass_for_minibatch(batch, model: torch.nn.Module, loss: torch.nn.Module, optimizer: torch.optim.Optimizer, device) -> float:
+def _pass_for_minibatch(
+    batch,
+    model: torch.nn.Module,
+    loss: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    device,
+) -> float:
     """Performs forward and backward passes on a particlar mini-batch."""
 
     batch = batch.to(device)
@@ -75,7 +84,9 @@ def _setup_backend(seed: Optional[int]) -> None:
     if deterministic:
         torch.manual_seed(seed)
 
-    torch.backends.cudnn.benchmark = not deterministic  # as image-sizes are assumed not to vary.
+    torch.backends.cudnn.benchmark = (
+        not deterministic
+    )  # as image-sizes are assumed not to vary.
     torch.backends.cudnn.deterministic = deterministic
 
 

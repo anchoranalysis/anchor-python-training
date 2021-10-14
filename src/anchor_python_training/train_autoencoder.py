@@ -1,15 +1,10 @@
-
-
 # Thanks to https://gist.github.com/AFAgarap/4f8a8d8edf352271fa06d85ba0361f26 for inspiration.
 
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
-import torchvision
 import torchinfo
 
 from typing import Iterable
@@ -19,7 +14,11 @@ from anchor_python_training import visualize, data, cnn, train
 def main():
     input_size = 64
 
-    train_data, validation_data = data.load_images_split(r"D:\Users\owen\Pictures\To Give To Naemi 2021\Ticino Weekend (March 2021)", [input_size, input_size], "jpg")
+    train_data, validation_data = data.load_images_split(
+        r"D:\Users\owen\Pictures\To Give To Naemi 2021\Ticino Weekend (March 2021)",
+        [input_size, input_size],
+        "jpg",
+    )
 
     model = cnn.AutoEncoder(number_channels=3, input_size=input_size)
 
@@ -32,7 +31,11 @@ def main():
     _plot_reconstruction_on_samples(validation_data, model)
 
 
-def _plot_reconstruction_on_samples(test_loader: torch.utils.data.DataLoader, model_reconstructing: nn.Module, number_images: int = 10) -> None:
+def _plot_reconstruction_on_samples(
+    test_loader: torch.utils.data.DataLoader,
+    model_reconstructing: nn.Module,
+    number_images: int = 10,
+) -> None:
     """Plots a random sample of reconstructed images (from the autoencoder) against the original images."""
 
     test_examples = None
@@ -46,7 +49,7 @@ def _plot_reconstruction_on_samples(test_loader: torch.utils.data.DataLoader, mo
     visualize.plot_images_two_rows(
         _images_from_tensor(test_examples),
         _images_from_tensor(reconstruction),
-        number_images
+        number_images,
     )
 
 

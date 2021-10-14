@@ -1,6 +1,5 @@
 import torch
 import torchvision
-import glob
 import PIL
 import pathlib
 
@@ -33,7 +32,14 @@ class _RecursiveImagesDataset(torch.utils.data.Dataset):
         return len(self._paths)
 
 
-def load_images_split(image_directory: str, image_size: Tuple[int, int], extension: str = "jpg", batch_size: int = 16, shuffle: bool = True, ratio_split: float = 0.3) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
+def load_images_split(
+    image_directory: str,
+    image_size: Tuple[int, int],
+    extension: str = "jpg",
+    batch_size: int = 16,
+    shuffle: bool = True,
+    ratio_split: float = 0.3,
+) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """Load all images recursively from a directory, and split into a training and validation batch.
 
     :param image_directory: the image directory to load images recursively from.
@@ -49,7 +55,11 @@ def load_images_split(image_directory: str, image_size: Tuple[int, int], extensi
 
     number_first, number_second = _calculate_splits(len(dataset), ratio_split)
 
-    train_set, val_set = torch.utils.data.random_split(dataset, [number_first, number_second], generator=torch.Generator().manual_seed(42))
+    train_set, val_set = torch.utils.data.random_split(
+        dataset,
+        [number_first, number_second],
+        generator=torch.Generator().manual_seed(42),
+    )
 
     def _loader(dataset: torch.utils.data.Dataset) -> torch.utils.data.Dataset:
         return torch.utils.data.DataLoader(
@@ -59,9 +69,13 @@ def load_images_split(image_directory: str, image_size: Tuple[int, int], extensi
     return _loader(train_set), _loader(val_set)
 
 
-def _dataset(image_directory: str, image_size: Tuple[int, int], extension: str) -> torch.utils.data.Dataset:
+def _dataset(
+    image_directory: str, image_size: Tuple[int, int], extension: str
+) -> torch.utils.data.Dataset:
     """Loads the images recursively into a dataset."""
-    transform = torchvision.transforms.Compose([torchvision.transforms.Resize(image_size), torchvision.transforms.ToTensor()])
+    transform = torchvision.transforms.Compose(
+        [torchvision.transforms.Resize(image_size), torchvision.transforms.ToTensor()]
+    )
 
     return _RecursiveImagesDataset(image_directory, extension, transform=transform)
 
@@ -80,6 +94,7 @@ def _calculate_splits(number_elements: int, ratio_split: float) -> Tuple[int, in
 
     if number_first == 0 or number_second == 0:
         raise RuntimeError(
-            f"Datasets must have at least one item, but they contained respectively {number_first} and {number_second} items.")
+            f"Each dataset must have at least one item. They had respectively {number_first} and {number_second} items."
+        )
 
     return number_first, number_second
