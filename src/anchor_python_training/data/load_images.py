@@ -38,7 +38,7 @@ def load_images_split(
     extension: str = "jpg",
     batch_size: int = 16,
     shuffle: bool = True,
-    ratio_split: float = 0.3,
+    ratio_split: float = 0.7,
 ) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """Load all images recursively from a directory, and split into a training and validation batch.
 
@@ -61,12 +61,12 @@ def load_images_split(
         generator=torch.Generator().manual_seed(42),
     )
 
-    def _loader(dataset: torch.utils.data.Dataset) -> torch.utils.data.Dataset:
+    def _loader(dataset: torch.utils.data.Dataset, shuffle: bool) -> torch.utils.data.Dataset:
         return torch.utils.data.DataLoader(
-            dataset, batch_size=batch_size, shuffle=shuffle
+            dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4
         )
 
-    return _loader(train_set), _loader(val_set)
+    return _loader(train_set, True), _loader(val_set, False)
 
 
 def _dataset(

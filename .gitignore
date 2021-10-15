@@ -53,3 +53,5 @@ MANIFEST
 .conda*/
 
 pip-wheel-metadata/
+
+lightning_logs/

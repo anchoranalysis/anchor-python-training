@@ -3,13 +3,17 @@
 import torch.nn as nn
 import math
 from typing import Iterable, Callable
+import pytorch_lightning as pl
+from torch.nn import functional as F
 
 
 # Convolutional kernel size.
+import torch.optim
+
 _KERNEL_SIZE = 3
 
 
-# The size we reduce all images to before flattening it into a code
+# The size we reduce all images to before flattening it into a code.
 _BASE_SIZE = 16
 
 
@@ -17,11 +21,11 @@ _BASE_SIZE = 16
 _PADDING = 1
 
 
-# Stride
+# Stride.
 _STRIDE = 2
 
 
-class AutoEncoder(nn.Module):
+class AutoEncoder(pl.LightningModule):
     def __init__(
         self,
         number_channels: int,
@@ -29,7 +33,7 @@ class AutoEncoder(nn.Module):
         code_size: int = 16,
         number_filters: int = 16,
     ):
-        super().__init__()
+        super(AutoEncoder, self).__init__()
 
         self._number_channels = number_channels
         self._number_filters = number_filters
@@ -55,6 +59,32 @@ class AutoEncoder(nn.Module):
         activation = self.encoder(activation)
         activation = self.decoder(activation)
         return activation
+
+    def training_step(self, batch, batch_idx):
+        return self._common_step(batch, batch_idx, "train")
+
+    #def validation_end(self, outputs):
+    #    tensorboard_logs = {'acc': {'val': some_value}, 'loss': {'val': some_value}}
+    #    return {"loss": loss, 'log': tensorboard_logs}
+
+    def validation_step(self, batch, batch_idx):
+        self._common_step(batch, batch_idx, "val")
+
+    def test_step(self, batch, batch_idx):
+        self._common_step(batch, batch_idx, "test")
+
+    def _common_step(self, batch, batch_idx, stage: str):
+        x, _ = batch
+        x_hat = self(x)
+        #loss = F.mse_loss(x, x_hat, reduction="none")
+        #loss = loss.sum(dim=[1, 2, 3]).mean(dim=[0])
+        loss = F.mse_loss(x, x_hat)
+        self.log(f"loss/{stage}", loss, on_step=True)
+        return loss
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=1e-3)
+
 
     def _downsampling_conv_filter(self, first: bool, last: bool) -> nn.Module:
         """A single downsampling filter.

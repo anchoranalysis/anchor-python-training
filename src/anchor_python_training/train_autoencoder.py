@@ -9,6 +9,7 @@ import torchinfo
 
 from typing import Iterable
 from anchor_python_training import visualize, data, cnn, train
+import pytorch_lightning as pl
 
 
 def main():
@@ -18,14 +19,33 @@ def main():
         r"D:\Users\owen\Pictures\To Give To Naemi 2021\Ticino Weekend (March 2021)",
         [input_size, input_size],
         "jpg",
+        batch_size = 4
     )
 
-    model = cnn.AutoEncoder(number_channels=3, input_size=input_size)
+    class DataModule(pl.LightningModule):
+
+        def setup(self, stage=None):
+            self._train_data, self._validation_data = data.load_images_split(
+                r"D:\Users\owen\Pictures\To Give To Naemi 2021\Ticino Weekend (March 2021)",
+                [input_size, input_size],
+                "jpg",
+            )
+
+        def train_dataloader(self):
+            return self._train_data
+
+        def val_dataloader(self):
+            return self._validation_data
+
+    model = cnn.AutoEncoder(number_channels=3, input_size=input_size, code_size=128)
 
     print(torchinfo.summary(model, (8, 3, input_size, input_size)))
     print(model)
 
-    train.train_model(train_data, validation_data, model, loss=nn.MSELoss(), epochs=50)
+    trainer = pl.Trainer(gpus=1, max_epochs=1000, precision=16, log_every_n_steps=1)
+    trainer.fit(model, train_data, validation_data)
+
+    #train.train_model(train_data, validation_data, model, loss=nn.MSELoss(), epochs=50)
 
     model = model.to(torch.device("cpu"))
     _plot_reconstruction_on_samples(validation_data, model)
