@@ -1,6 +1,7 @@
 """A Lightning data-module for loading images recursively from a file-system directory."""
 from .load_images import load_images_split_three
 import pytorch_lightning as pl
+from typing import Optional
 
 
 class LoadImagesModule(pl.LightningDataModule):
@@ -52,7 +53,7 @@ class LoadImagesModule(pl.LightningDataModule):
         pass
 
     #
-    def setup(self, stage=None):
+    def setup(self, stage: Optional[str] = None):
         """Overrides :class:`pl.LightningDataModule`."""
         # Load images normally occurs here, but we've already done it in the constructor.
         pass

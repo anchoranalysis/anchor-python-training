@@ -1,4 +1,4 @@
-"""Trains (or validates etc.) an AutoEncoder model against images using the PyTorch Lightning Command Line Infterface.
+"""Trains (or validates etc.) an AutoEncoder model against images using the PyTorch Lightning Command Line Interface.
 
 Please see :class:`cnn.AutoEncoder` for details of the auto-encoder architecture.
 
@@ -44,7 +44,7 @@ class _MyLightningCLI(cli.LightningCLI):
 
         config_fit = self.config["fit"]
         input_size = config_fit["model"]["input_size"]
-        batch_size = config_fit["model"]["batch_size"]
+        batch_size = config_fit["data"]["batch_size"]
         rgb = config_fit["data"]["rgb"]
         print(
             torchinfo.summary(

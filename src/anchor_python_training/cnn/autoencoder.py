@@ -2,21 +2,21 @@
 
 import torch.nn as nn
 import math
-from typing import Iterable, Callable
+from typing import Iterable, Callable, List
 import pytorch_lightning as pl
 import torch.optim
 from torch.nn import functional as F
 
 
-BASE_IMAGE_SIZE = 16
+BASE_IMAGE_SIZE: int = 16
 """The width and neight that images are downsampled to before flattening it into a code."""
 
 
-_KERNEL_SIZE = 3
+_KERNEL_SIZE: int = 3
 """The size of each convolutional step."""
 
 
-_PADDING = 1
+_PADDING: int = 1
 """The padding, both input and output for filters."""
 
 
@@ -66,29 +66,29 @@ class AutoEncoder(pl.LightningModule):
             *_repeat_with_relu(rounds_downsampling, self._upsampling_conv_filter),
         )
 
-    def forward(self, activation):
+    def forward(self, activation: torch.Tensor):
         """Overrides :mod:`pl.LightningModule`."""
         activation = self.encoder(activation)
         activation = self.decoder(activation)
         return activation
 
-    def training_step(self, batch, batch_idx):
-        """Overrides :mod:`pl.LightningModule`."""
+    def training_step(self, batch: List[torch.Tensor], batch_idx: int):
+        """Overrides :class:`pl.LightningModule`."""
         return self._common_step(batch, batch_idx, "train")
 
-    def validation_step(self, batch, batch_idx):
-        """Overrides :mod:`pl.LightningModule`."""
+    def validation_step(self, batch: List[torch.Tensor], batch_idx: int):
+        """Overrides :class:`pl.LightningModule`."""
         self._common_step(batch, batch_idx, "val")
 
-    def test_step(self, batch, batch_idx):
-        """Overrides :mod:`pl.LightningModule`."""
+    def test_step(self, batch: List[torch.Tensor], batch_idx: int):
+        """Overrides :class:`pl.LightningModule`."""
         self._common_step(batch, batch_idx, "test")
 
     def configure_optimizers(self):
         """Overrides :mod:`pl.LightningModule`. This docstring replaces the parent docstring which is errored."""
         return torch.optim.Adam(self.parameters(), lr=1e-3)
 
-    def _common_step(self, batch, batch_idx, stage: str):
+    def _common_step(self, batch: List[torch.Tensor], batch_idx: int, stage: str):
         x, _ = batch
         x_hat = self(x)
         loss = F.mse_loss(x, x_hat)
