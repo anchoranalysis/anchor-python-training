@@ -2,7 +2,7 @@
 
 import torch.nn as nn
 import math
-from typing import Iterable, Callable, List
+from typing import Iterable, Callable, List, Union
 import pytorch_lightning as pl
 import torch.optim
 from torch.nn import functional as F
@@ -36,6 +36,14 @@ class AutoEncoder(pl.LightningModule):
     ):
         """Creates an AutoEncoder Model, with an architecture as described in the class-level docstring.
 
+        The architecture is summarized as follows:
+
+        - The input is incrementally downsampled by two until it becomes :code:`[BASE_IMAGE_SIZE, BASE_IMAGE_SIZE]`.
+        - It is flattened, and there's a linear layer mapping it to a coding vector of size `code_size`.
+        - It is then unflattened, and there's a linear layer mapping it back to
+          :code:`[BASE_IMAGE_SIZE, BASE_IMAGE_SIZE]`.
+        - Is then upsampled incrementally by two until it becomes the original input-size again.
+
         :param number_channels: the number of channels in the input image e.g. 1 for grayscale, 3 for RGB.
         :param input_size: the width and height of images fed into the autoencoder. It should be a power of 2 and
                            :code:`>=` :const:`BASE_IMAGE_SIZE`.
@@ -66,11 +74,31 @@ class AutoEncoder(pl.LightningModule):
             *_repeat_with_relu(rounds_downsampling, self._upsampling_conv_filter),
         )
 
-    def forward(self, activation: torch.Tensor):
+    def forward(
+        self, activation: Union[torch.Tensor, List[torch.Tensor]]
+    ) -> torch.Tensor:
         """Overrides :mod:`pl.LightningModule`."""
-        activation = self.encoder(activation)
-        activation = self.decoder(activation)
-        return activation
+
+        # Perform only the encode step when predicting.
+
+        # When predicting, activation is both the input tensor and another.
+        # This ensures only the input tensor is used
+        # See https://github.com/PyTorchLightning/pytorch-lightning/issues/1137
+        if isinstance(activation, List):
+            activation = activation[0]
+
+        return self.encoder(activation)
+
+    def forward_encode_decode(
+        self, input: Union[torch.Tensor, List[torch.Tensor]]
+    ) -> torch.Tensor:
+        """Performs both the encode and decode step on an input (batched).
+
+        :param input: the input tensor.
+        :returns: the tensor after encoding and decoding.
+        """
+        temp = self.forward(input)
+        return self.decoder(temp)
 
     def training_step(self, batch: List[torch.Tensor], batch_idx: int):
         """Overrides :class:`pl.LightningModule`."""
@@ -84,13 +112,17 @@ class AutoEncoder(pl.LightningModule):
         """Overrides :class:`pl.LightningModule`."""
         self._common_step(batch, batch_idx, "test")
 
+    def predict_step(self, batch, batch_idx: int, dataloader_idx: int = None):
+        return self(batch)
+
     def configure_optimizers(self):
         """Overrides :mod:`pl.LightningModule`. This docstring replaces the parent docstring which is errored."""
         return torch.optim.Adam(self.parameters(), lr=1e-3)
 
     def _common_step(self, batch: List[torch.Tensor], batch_idx: int, stage: str):
         x, _ = batch
-        x_hat = self(x)
+        x_hat = self.encoder(x)
+        x_hat = self.decoder(x_hat)
         loss = F.mse_loss(x, x_hat)
         self.log(f"loss/{stage}", loss, on_step=True)
         return loss
