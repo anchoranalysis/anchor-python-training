@@ -8,6 +8,23 @@ from typing import Tuple
 from ._recursive_images_dataset import RecursiveImagesDataset
 
 
+class _UnifyNumberChannels(object):
+    """Transform PIL images so that they have the desired number of channels."""
+
+    def __init__(self, rgb: bool):
+        """Creates to unify to either RGB (three channels) or grayscale (single channel).
+
+        :param rgb: true, indicates images should be converted (where necessary) to 3 channels. false to 1 channel.
+        """
+        self._rgb = rgb
+
+    def __call__(self, image: PIL.Image.Image) -> PIL.Image.Image:
+        return image.convert("RGB" if self._rgb else "L")
+
+    def __repr__(self):
+        return self.__class__.__name__ + "()"
+
+
 def load_images_split_two(
     image_directory: str,
     image_size: Tuple[int, int],
@@ -96,23 +113,6 @@ def load_images_split_three(
         )
 
     return _loader(train_set), _loader(val_set), _loader(test_set)
-
-
-class _UnifyNumberChannels(object):
-    """Transform PIL images so that they have the desired number of channels."""
-
-    def __init__(self, rgb: bool):
-        """Creates to unify to either RGB (three channels) or grayscale (single channel).
-
-        :param rgb: true, indicates images should be converted (where necessary) to 3 channels. false to 1 channel.
-        """
-        self._rgb = rgb
-
-    def __call__(self, image: PIL.Image.Image) -> PIL.Image.Image:
-        return image.convert("RGB" if self._rgb else "L")
-
-    def __repr__(self):
-        return self.__class__.__name__ + "()"
 
 
 def _dataset(

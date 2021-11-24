@@ -151,7 +151,7 @@ def _repeat_with_relu(
 
 
 def _calculate_rounds_downsampling(input_size: int) -> int:
-    """Calculates how many rounds downsamling is needed so that the input becomes :const:`BASE_IMAGE_SIZE`.
+    """Calculates how many rounds downsampling is needed so that the input becomes :const:`BASE_IMAGE_SIZE`.
 
     A check occurs that :code:`input_size` fulfills the necessary criteria.
     """
