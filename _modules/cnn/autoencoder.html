@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cnn.autoencoder &mdash; anchor_python_training  documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/graphviz.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> anchor_python_training
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">anchor_python_training</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>cnn.autoencoder</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for cnn.autoencoder</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;An CNN-based `autoencoder &lt;https://en.wikipedia.org/wiki/Autoencoder&gt;`_ model.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Callable</span>
+<span class="kn">import</span> <span class="nn">pytorch_lightning</span> <span class="k">as</span> <span class="nn">pl</span>
+<span class="kn">import</span> <span class="nn">torch.optim</span>
+<span class="kn">from</span> <span class="nn">torch.nn</span> <span class="kn">import</span> <span class="n">functional</span> <span class="k">as</span> <span class="n">F</span>
+
+
+<div class="viewcode-block" id="BASE_IMAGE_SIZE"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.BASE_IMAGE_SIZE">[docs]</a><span class="n">BASE_IMAGE_SIZE</span> <span class="o">=</span> <span class="mi">16</span></div>
+<span class="sd">&quot;&quot;&quot;The width and neight that images are downsampled to before flattening it into a code.&quot;&quot;&quot;</span>
+
+
+<span class="n">_KERNEL_SIZE</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="sd">&quot;&quot;&quot;The size of each convolutional step.&quot;&quot;&quot;</span>
+
+
+<span class="n">_PADDING</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="sd">&quot;&quot;&quot;The padding, both input and output for filters.&quot;&quot;&quot;</span>
+
+
+<span class="n">_STRIDE</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="sd">&quot;&quot;&quot;The stride in each convolutional filter.&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="AutoEncoder"><a class="viewcode-back" href="../../autoapi/cnn/index.html#cnn.autoencoder.AutoEncoder">[docs]</a><span class="k">class</span> <span class="nc">AutoEncoder</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">LightningModule</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An AutoEncoder model, based upon incrementally downsampling CNNs to a flat code, and then upsampling CNNs.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">number_channels</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+        <span class="n">input_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
+        <span class="n">code_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span><span class="p">,</span>
+        <span class="n">number_filters</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates an AutoEncoder Model, with an architecture as described in the class-level docstring.</span>
+
+<span class="sd">        :param number_channels: the number of channels in the input image e.g. 1 for grayscale, 3 for RGB.</span>
+<span class="sd">        :param input_size: the width and height of images fed into the autoencoder. It should be a power of 2 and</span>
+<span class="sd">                           :code:`&gt;=` :const:`BASE_IMAGE_SIZE`.</span>
+<span class="sd">        :param code_size: how many variables exist in the &#39;bottleneck&#39; latent space part of the autoencoder. Each</span>
+<span class="sd">                          image will be encoded into a vector of this size.</span>
+<span class="sd">        :param number_filters: the number of filters to use in each convolutional operation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">AutoEncoder</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_number_channels</span> <span class="o">=</span> <span class="n">number_channels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_number_filters</span> <span class="o">=</span> <span class="n">number_filters</span>
+
+        <span class="n">rounds_downsampling</span> <span class="o">=</span> <span class="n">_calculate_rounds_downsampling</span><span class="p">(</span><span class="n">input_size</span><span class="p">)</span>
+
+        <span class="c1"># The size before being linear mapped into the code vector.</span>
+        <span class="n">penultimate_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_number_filters</span> <span class="o">*</span> <span class="n">BASE_IMAGE_SIZE</span> <span class="o">*</span> <span class="n">BASE_IMAGE_SIZE</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="o">*</span><span class="n">_repeat_with_relu</span><span class="p">(</span><span class="n">rounds_downsampling</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_downsampling_conv_filter</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Flatten</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">penultimate_size</span><span class="p">,</span> <span class="n">code_size</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(</span><span class="kc">True</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">code_size</span><span class="p">,</span> <span class="n">penultimate_size</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(</span><span class="kc">True</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Unflatten</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_number_filters</span><span class="p">,</span> <span class="n">BASE_IMAGE_SIZE</span><span class="p">,</span> <span class="n">BASE_IMAGE_SIZE</span><span class="p">)),</span>
+            <span class="o">*</span><span class="n">_repeat_with_relu</span><span class="p">(</span><span class="n">rounds_downsampling</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_upsampling_conv_filter</span><span class="p">),</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="AutoEncoder.forward"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.AutoEncoder.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activation</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Overrides :mod:`pl.LightningModule`.&quot;&quot;&quot;</span>
+        <span class="n">activation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">activation</span><span class="p">)</span>
+        <span class="n">activation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">activation</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">activation</span></div>
+
+<div class="viewcode-block" id="AutoEncoder.training_step"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.AutoEncoder.training_step">[docs]</a>    <span class="k">def</span> <span class="nf">training_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">batch_idx</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Overrides :mod:`pl.LightningModule`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_common_step</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">batch_idx</span><span class="p">,</span> <span class="s2">&quot;train&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AutoEncoder.validation_step"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.AutoEncoder.validation_step">[docs]</a>    <span class="k">def</span> <span class="nf">validation_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">batch_idx</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Overrides :mod:`pl.LightningModule`.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_common_step</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">batch_idx</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AutoEncoder.test_step"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.AutoEncoder.test_step">[docs]</a>    <span class="k">def</span> <span class="nf">test_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">batch_idx</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Overrides :mod:`pl.LightningModule`.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_common_step</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">batch_idx</span><span class="p">,</span> <span class="s2">&quot;test&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AutoEncoder.configure_optimizers"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.AutoEncoder.configure_optimizers">[docs]</a>    <span class="k">def</span> <span class="nf">configure_optimizers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Overrides :mod:`pl.LightningModule`. This docstring replaces the parent docstring which is errored.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_common_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">batch_idx</span><span class="p">,</span> <span class="n">stage</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">batch</span>
+        <span class="n">x_hat</span> <span class="o">=</span> <span class="bp">self</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x_hat</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;loss/</span><span class="si">{</span><span class="n">stage</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">on_step</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">loss</span>
+
+    <span class="k">def</span> <span class="nf">_downsampling_conv_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">first</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">last</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;A single downsampling convolutional filter.</span>
+
+<span class="sd">        This is an approximately opposite counterpart to :meth:`_upsampling_conv_filter`.</span>
+
+<span class="sd">        The number of output channels is always :code:`self._number_filters`.</span>
+
+<span class="sd">        The number of input channels is :code:`self._number_filters`, apart from the first layer which is</span>
+<span class="sd">        :code:`self._number_channels`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">number_filters_in</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_number_channels</span> <span class="k">if</span> <span class="n">first</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_number_filters</span>
+        <span class="k">return</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span>
+            <span class="n">number_filters_in</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_number_filters</span><span class="p">,</span>
+            <span class="n">_KERNEL_SIZE</span><span class="p">,</span>
+            <span class="n">stride</span><span class="o">=</span><span class="n">_STRIDE</span><span class="p">,</span>
+            <span class="n">padding</span><span class="o">=</span><span class="n">_PADDING</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_upsampling_conv_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">first</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">last</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;A single upsampling filter.</span>
+
+<span class="sd">        This is an approximately opposite counterpart to :meth:`_downsampling_conv_filter`.</span>
+
+<span class="sd">        The number of input channels is always :code:`self._number_filters`.</span>
+
+<span class="sd">        The number of output channels is :code:`self._number_filters`, apart from the final layer which is</span>
+<span class="sd">        :code:`self._number_channels`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">number_filters_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_number_channels</span> <span class="k">if</span> <span class="n">last</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_number_filters</span>
+        <span class="k">return</span> <span class="n">nn</span><span class="o">.</span><span class="n">ConvTranspose2d</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_number_filters</span><span class="p">,</span>
+            <span class="n">number_filters_out</span><span class="p">,</span>
+            <span class="n">_KERNEL_SIZE</span><span class="p">,</span>
+            <span class="n">stride</span><span class="o">=</span><span class="n">_STRIDE</span><span class="p">,</span>
+            <span class="n">padding</span><span class="o">=</span><span class="n">_PADDING</span><span class="p">,</span>
+            <span class="n">output_padding</span><span class="o">=</span><span class="n">_PADDING</span><span class="p">,</span></div>
+        <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_repeat_with_relu</span><span class="p">(</span>
+    <span class="n">times</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">create_filter</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Repeats the following: a filter, followed by a ReLU for a certain number of times.</span>
+
+<span class="sd">    :param times: the number of times to repeat the filter and ReLU.</span>
+<span class="sd">    :param create_filter: creates the filter to use, passing boolean flags indicating if it is the first and last</span>
+<span class="sd">                          iteration, respectively.</span>
+<span class="sd">    :returns: the successive filter and ReLU modules, repeated {@code times} number of times.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">times</span><span class="p">):</span>
+        <span class="k">yield</span> <span class="n">create_filter</span><span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">i</span> <span class="o">==</span> <span class="p">(</span><span class="n">times</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">yield</span> <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_calculate_rounds_downsampling</span><span class="p">(</span><span class="n">input_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Calculates how many rounds downsamling is needed so that the input becomes :const:`BASE_IMAGE_SIZE`.</span>
+
+<span class="sd">    A check occurs that :code:`input_size` fulfills the necessary criteria.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rounds</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">input_size</span> <span class="o">/</span> <span class="n">BASE_IMAGE_SIZE</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">rounds</span><span class="o">.</span><span class="n">is_integer</span><span class="p">():</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">rounds</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;input_size must be a power of 2 (&gt;= </span><span class="si">{</span><span class="n">BASE_IMAGE_SIZE</span><span class="si">}</span><span class="s2">) but is </span><span class="si">{</span><span class="n">input_size</span><span class="si">}</span><span class="s2">.&quot;</span>
+        <span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Owen Feehan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

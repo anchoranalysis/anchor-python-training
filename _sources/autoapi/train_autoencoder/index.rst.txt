@@ -1,0 +1,46 @@
+:py:mod:`train_autoencoder`
+===========================
+
+.. py:module:: train_autoencoder
+
+.. autoapi-nested-parse::
+
+   Trains (or validates etc.) an AutoEncoder model against images using the PyTorch Lightning Command Line Infterface.
+
+   Please see :class:`cnn.AutoEncoder` for details of the auto-encoder architecture.
+
+   Input Arguments
+   ===============
+
+   Please see `PyTorch Lightning CLI <https://pytorch-lightning.readthedocs.io/en/stable/common/lightning_cli.html>`_ for
+   details on how to use the command line interface.
+
+   As a suggestion, first create a configuration file by saving the contents to e.g. `config.yaml`::
+
+       python -m anchor_python_training.train_autoencoder fit --print_config
+
+   and then use these configuration file to perform the training::
+
+       python -m anchor_python_training.train_autoencoder fit --config config.yaml
+
+   The outputted model is saved incrementally via checkpoints to a directory `lightning_logs` in the working directory
+   (unless otherwise configured).
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   train_autoencoder.main
+
+
+
+.. py:function:: main()
+
+

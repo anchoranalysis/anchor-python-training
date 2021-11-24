@@ -1,0 +1,35 @@
+:orphan:
+
+:py:mod:`visualize.reconstruction`
+==================================
+
+.. py:module:: visualize.reconstruction
+
+.. autoapi-nested-parse::
+
+   Plots reconstruction of images against their original forms.
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   visualize.reconstruction.plot_reconstruction_on_first_batch
+
+
+
+.. py:function:: plot_reconstruction_on_first_batch(loader: torch.utils.data.DataLoader, model_reconstructing: torch.nn.Module) -> None
+
+   Plots the first batch of reconstructed images against the original images.
+
+   :param loader: a loader from which the first batch of images is loaded.
+   :param model_reconstructing: a model which reconstructs an image (produces an image of identical structure to
+                                the input image, when passed an input-image).
+
+

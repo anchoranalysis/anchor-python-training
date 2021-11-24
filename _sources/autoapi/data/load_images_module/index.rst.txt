@@ -1,0 +1,58 @@
+:orphan:
+
+:py:mod:`data.load_images_module`
+=================================
+
+.. py:module:: data.load_images_module
+
+.. autoapi-nested-parse::
+
+   A Lightning data-module for loading images recursively from a file-system directory.
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   data.load_images_module.LoadImagesModule
+
+
+
+
+.. py:class:: LoadImagesModule(image_directory: str, image_size: int, extension: str = 'jpg', rgb: bool = True, batch_size: int = 16, number_workers: int = 1, ratio_validation: float = 0.3, ratio_test: float = 0.2)
+
+   Bases: :py:obj:`pytorch_lightning.LightningDataModule`
+
+   A Lightning data-module for loading images recursively from a file-system directory.
+
+   .. py:method:: prepare_data(self) -> None
+
+      Overrides :class:`pl.LightningDataModule`.
+
+
+   .. py:method:: setup(self, stage=None)
+
+      Overrides :class:`pl.LightningDataModule`.
+
+
+   .. py:method:: train_dataloader(self)
+
+      Overrides :class:`pl.LightningDataModule`.
+
+
+   .. py:method:: val_dataloader(self)
+
+      Overrides :class:`pl.LightningDataModule`.
+
+
+   .. py:method:: test_dataloader(self)
+
+      Overrides :class:`pl.LightningDataModule`.
+
+
+

@@ -1,0 +1,97 @@
+:py:mod:`data`
+==============
+
+.. py:module:: data
+
+.. autoapi-nested-parse::
+
+   Loading images and other data from the file-system.
+
+
+
+Package Contents
+----------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   data.LoadImagesModule
+
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   data.load_images_split_two
+   data.load_images_split_three
+
+
+
+.. py:function:: load_images_split_two(image_directory: str, image_size: Tuple[int, int], extension: str = 'jpg', rgb: bool = True, batch_size: int = 16, number_workers: int = 1, ratio_validation: float = 0.3) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]
+
+   Load all images recursively from a directory, and split into *training and validation batches*.
+
+   :param image_directory: the image directory to load images recursively from.
+   :param image_size: the size (height, width) to resize all images to.
+   :param extension: the extension (without a leading period) that all image files must match.
+   :param rgb: when true, images are always loaded as RGB. when false, they are loaded as grayscale.
+   :param batch_size: how many images should be in a batch.
+   :param number_workers: the number of workers for the data-loader.
+   :param ratio_validation: a number between 0 and 1 determining linearly how many elements belong in the validation
+                            set e.g. 0.4 would try and place 40% approximately of elements into the second partition.
+   :returns: the loaded images, split into training and validation data respectively.
+
+
+.. py:function:: load_images_split_three(image_directory: str, image_size: Tuple[int, int], extension: str = 'jpg', rgb: bool = True, batch_size: int = 16, number_workers: int = 1, ratio_validation: float = 0.3, ratio_test: float = 0.2) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader, torch.utils.data.DataLoader]
+
+   Load all images recursively from a directory, and split into *training, validation and test batches*.
+
+   :param image_directory: the image directory to load images recursively from.
+   :param image_size: the size (height, width) to resize all images to.
+   :param extension: the extension (without a leading period) that all image files must match.
+   :param rgb: when true, images are always loaded as RGB. when false, they are loaded as grayscale.
+   :param batch_size: how many images should be in a batch.
+   :param number_workers: the number of workers for the data-loader.
+   :param ratio_validation: a number between 0 and 1 determining linearly how many elements belong in the validation
+                            set e.g. 0.4 would try and place 40% approximately of elements into the second batch.
+   :param ratio_test: a number between 0 and 1 determining linearly how many elements belong in the validation
+                            set e.g. 0.2 would try and place 20% approximately of elements into the third batch.
+   :returns: the loaded images, split into training and validation data and test data respectively.
+
+
+.. py:class:: LoadImagesModule(image_directory: str, image_size: int, extension: str = 'jpg', rgb: bool = True, batch_size: int = 16, number_workers: int = 1, ratio_validation: float = 0.3, ratio_test: float = 0.2)
+
+   Bases: :py:obj:`pytorch_lightning.LightningDataModule`
+
+   A Lightning data-module for loading images recursively from a file-system directory.
+
+   .. py:method:: prepare_data(self) -> None
+
+      Overrides :class:`pl.LightningDataModule`.
+
+
+   .. py:method:: setup(self, stage=None)
+
+      Overrides :class:`pl.LightningDataModule`.
+
+
+   .. py:method:: train_dataloader(self)
+
+      Overrides :class:`pl.LightningDataModule`.
+
+
+   .. py:method:: val_dataloader(self)
+
+      Overrides :class:`pl.LightningDataModule`.
+
+
+   .. py:method:: test_dataloader(self)
+
+      Overrides :class:`pl.LightningDataModule`.
+
+
+

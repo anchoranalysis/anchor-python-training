@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>train_autoencoder &mdash; anchor_python_training  documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/graphviz.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> anchor_python_training
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">anchor_python_training</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">Module code</a> &raquo;</li>
+      <li>train_autoencoder</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for train_autoencoder</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Trains (or validates etc.) an AutoEncoder model against images using the PyTorch Lightning Command Line Infterface.</span>
+
+<span class="sd">Please see :class:`cnn.AutoEncoder` for details of the auto-encoder architecture.</span>
+
+<span class="sd">Input Arguments</span>
+<span class="sd">===============</span>
+
+<span class="sd">Please see `PyTorch Lightning CLI &lt;https://pytorch-lightning.readthedocs.io/en/stable/common/lightning_cli.html&gt;`_ for</span>
+<span class="sd">details on how to use the command line interface.</span>
+
+<span class="sd">As a suggestion, first create a configuration file by saving the contents to e.g. `config.yaml`::</span>
+
+<span class="sd">    python -m anchor_python_training.train_autoencoder fit --print_config</span>
+
+<span class="sd">and then use these configuration file to perform the training::</span>
+
+<span class="sd">    python -m anchor_python_training.train_autoencoder fit --config config.yaml</span>
+
+<span class="sd">The outputted model is saved incrementally via checkpoints to a directory `lightning_logs` in the working directory</span>
+<span class="sd">(unless otherwise configured).</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="n">__author__</span> <span class="o">=</span> <span class="s2">&quot;Owen Feehan&quot;</span>
+<span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">&quot;Copyright 2021, Owen Feehan&quot;</span>
+
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torchinfo</span>
+
+<span class="kn">from</span> <span class="nn">anchor_python_training</span> <span class="kn">import</span> <span class="n">visualize</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">cnn</span>
+<span class="kn">from</span> <span class="nn">pytorch_lightning.utilities</span> <span class="kn">import</span> <span class="n">cli</span>
+
+
+<span class="k">class</span> <span class="nc">_MyLightningCLI</span><span class="p">(</span><span class="n">cli</span><span class="o">.</span><span class="n">LightningCLI</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Customized CLI implementation.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">add_arguments_to_parser</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">):</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">link_arguments</span><span class="p">(</span>
+            <span class="s2">&quot;data.rgb&quot;</span><span class="p">,</span> <span class="s2">&quot;model.number_channels&quot;</span><span class="p">,</span> <span class="n">compute_fn</span><span class="o">=</span><span class="n">_number_channels</span>
+        <span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">link_arguments</span><span class="p">(</span><span class="s2">&quot;model.input_size&quot;</span><span class="p">,</span> <span class="s2">&quot;data.image_size&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">before_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Print model architecture details to the console.</span>
+        <span class="n">config_fit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;fit&quot;</span><span class="p">]</span>
+        <span class="n">input_size</span> <span class="o">=</span> <span class="n">config_fit</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">][</span><span class="s2">&quot;input_size&quot;</span><span class="p">]</span>
+        <span class="n">rgb</span> <span class="o">=</span> <span class="n">config_fit</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">][</span><span class="s2">&quot;rgb&quot;</span><span class="p">]</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="n">torchinfo</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="n">_number_channels</span><span class="p">(</span><span class="n">rgb</span><span class="p">),</span> <span class="n">input_size</span><span class="p">,</span> <span class="n">input_size</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">after_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Plot the first batch: reconstructed against original</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cpu&quot;</span><span class="p">))</span>
+        <span class="n">visualize</span><span class="o">.</span><span class="n">plot_reconstruction_on_first_batch</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="o">.</span><span class="n">validation_data</span><span class="p">,</span> <span class="n">model</span>
+        <span class="p">)</span>
+
+
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../autoapi/train_autoencoder/index.html#train_autoencoder.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="n">_MyLightningCLI</span><span class="p">(</span><span class="n">cnn</span><span class="o">.</span><span class="n">AutoEncoder</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">LoadImagesModule</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_number_channels</span><span class="p">(</span><span class="n">rgb</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Determines the number of channels corresponding to a RGB flag.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">rgb</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">3</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">1</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Owen Feehan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,72 @@
+:orphan:
+
+:py:mod:`cnn.autoencoder`
+=========================
+
+.. py:module:: cnn.autoencoder
+
+.. autoapi-nested-parse::
+
+   An CNN-based `autoencoder <https://en.wikipedia.org/wiki/Autoencoder>`_ model.
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cnn.autoencoder.AutoEncoder
+
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   cnn.autoencoder.BASE_IMAGE_SIZE
+
+
+.. py:data:: BASE_IMAGE_SIZE
+   :annotation: = 16
+
+   The width and neight that images are downsampled to before flattening it into a code.
+
+
+.. py:class:: AutoEncoder(number_channels: int = 3, input_size: int = 32, code_size: int = 16, number_filters: int = 4)
+
+   Bases: :py:obj:`pytorch_lightning.LightningModule`
+
+   An AutoEncoder model, based upon incrementally downsampling CNNs to a flat code, and then upsampling CNNs.
+
+   .. py:method:: forward(self, activation)
+
+      Overrides :mod:`pl.LightningModule`.
+
+
+   .. py:method:: training_step(self, batch, batch_idx)
+
+      Overrides :mod:`pl.LightningModule`.
+
+
+   .. py:method:: validation_step(self, batch, batch_idx)
+
+      Overrides :mod:`pl.LightningModule`.
+
+
+   .. py:method:: test_step(self, batch, batch_idx)
+
+      Overrides :mod:`pl.LightningModule`.
+
+
+   .. py:method:: configure_optimizers(self)
+
+      Overrides :mod:`pl.LightningModule`. This docstring replaces the parent docstring which is errored.
+
+
+

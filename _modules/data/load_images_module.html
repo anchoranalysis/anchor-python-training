@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>data.load_images_module &mdash; anchor_python_training  documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/graphviz.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> anchor_python_training
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">anchor_python_training</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>data.load_images_module</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for data.load_images_module</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;A Lightning data-module for loading images recursively from a file-system directory.&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">.load_images</span> <span class="kn">import</span> <span class="n">load_images_split_three</span>
+<span class="kn">import</span> <span class="nn">pytorch_lightning</span> <span class="k">as</span> <span class="nn">pl</span>
+
+
+<div class="viewcode-block" id="LoadImagesModule"><a class="viewcode-back" href="../../autoapi/data/load_images_module/index.html#data.LoadImagesModule">[docs]</a><span class="k">class</span> <span class="nc">LoadImagesModule</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">LightningDataModule</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A Lightning data-module for loading images recursively from a file-system directory.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">image_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">image_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">extension</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;jpg&quot;</span><span class="p">,</span>
+        <span class="n">rgb</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span><span class="p">,</span>
+        <span class="n">number_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">ratio_validation</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">,</span>
+        <span class="n">ratio_test</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates the module with necessary parameterization.</span>
+
+<span class="sd">        :param image_directory: the image directory to load images recursively from.</span>
+<span class="sd">        :param image_size: the size (height and width) to resize all images to.</span>
+<span class="sd">        :param extension: the extension (without a leading period) that all image files must match.</span>
+<span class="sd">        :param rgb: when true, images are always loaded as RGB. when false, they are loaded as grayscale.</span>
+<span class="sd">        :param batch_size: how many images should be in a batch.</span>
+<span class="sd">        :param number_workers: the number of workers for the data-loader.</span>
+<span class="sd">        :param ratio_validation: a number between 0 and 1 determining linearly how many elements belong in the</span>
+<span class="sd">                                 validation set e.g. 0.4 would try and place 40% approximately of elements into the</span>
+<span class="sd">                                 second batch.</span>
+<span class="sd">        :param ratio_test: a number between 0 and 1 determining linearly how many elements belong in the validation</span>
+<span class="sd">                           set e.g. 0.2 would try and place 20% approximately of elements into the third batch.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">test_data</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">=</span> <span class="n">load_images_split_three</span><span class="p">(</span>
+            <span class="n">image_directory</span><span class="p">,</span>
+            <span class="p">[</span><span class="n">image_size</span><span class="p">,</span> <span class="n">image_size</span><span class="p">],</span>
+            <span class="n">extension</span><span class="p">,</span>
+            <span class="n">rgb</span><span class="p">,</span>
+            <span class="n">batch_size</span><span class="p">,</span>
+            <span class="n">number_workers</span><span class="p">,</span>
+            <span class="n">ratio_validation</span><span class="p">,</span>
+            <span class="n">ratio_test</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="LoadImagesModule.prepare_data"><a class="viewcode-back" href="../../autoapi/data/load_images_module/index.html#data.LoadImagesModule.prepare_data">[docs]</a>    <span class="k">def</span> <span class="nf">prepare_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Overrides :class:`pl.LightningDataModule`.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+    <span class="c1">#</span>
+<div class="viewcode-block" id="LoadImagesModule.setup"><a class="viewcode-back" href="../../autoapi/data/load_images_module/index.html#data.LoadImagesModule.setup">[docs]</a>    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Overrides :class:`pl.LightningDataModule`.&quot;&quot;&quot;</span>
+        <span class="c1"># Load images normally occurs here, but we&#39;ve already done it in the constructor.</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="LoadImagesModule.train_dataloader"><a class="viewcode-back" href="../../autoapi/data/load_images_module/index.html#data.LoadImagesModule.train_dataloader">[docs]</a>    <span class="k">def</span> <span class="nf">train_dataloader</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Overrides :class:`pl.LightningDataModule`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span></div>
+
+<div class="viewcode-block" id="LoadImagesModule.val_dataloader"><a class="viewcode-back" href="../../autoapi/data/load_images_module/index.html#data.LoadImagesModule.val_dataloader">[docs]</a>    <span class="k">def</span> <span class="nf">val_dataloader</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Overrides :class:`pl.LightningDataModule`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span></div>
+
+<div class="viewcode-block" id="LoadImagesModule.test_dataloader"><a class="viewcode-back" href="../../autoapi/data/load_images_module/index.html#data.LoadImagesModule.test_dataloader">[docs]</a>    <span class="k">def</span> <span class="nf">test_dataloader</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Overrides :class:`pl.LightningDataModule`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_data</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Owen Feehan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

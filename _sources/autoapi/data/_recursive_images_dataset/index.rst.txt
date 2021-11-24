@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`data._recursive_images_dataset`
+========================================
+
+.. py:module:: data._recursive_images_dataset
+
+

@@ -1,0 +1,36 @@
+:orphan:
+
+:py:mod:`visualize.comparison`
+==============================
+
+.. py:module:: visualize.comparison
+
+.. autoapi-nested-parse::
+
+   Plots comparisons of a single image or set of images against nother image or set.
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   visualize.comparison.plot_images_two_rows
+
+
+
+.. py:function:: plot_images_two_rows(top: Iterable[numpy.ndarray], bottom: Iterable[numpy.ndarray], row_size: int = 10, figure_size=(20, 4)) -> None
+
+   Plot a top-row of images, alongside a bottom-row of images.
+
+   :param top: the images on the top-row. There must be at least :code:row_size: elements.
+   :param bottom: the images on the bottom-row. There must be at least :code:row_size: elements.
+   :param row_size: the maximum number of images on a row.
+   :param figure_size: the size of figure in inches, as passed to :func:`plt.figure`.
+
+
