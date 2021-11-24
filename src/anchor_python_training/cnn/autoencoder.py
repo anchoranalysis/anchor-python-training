@@ -25,7 +25,16 @@ _STRIDE: int = 2
 
 
 class AutoEncoder(pl.LightningModule):
-    """An AutoEncoder model, based upon incrementally downsampling CNNs to a flat code, and then upsampling CNNs."""
+    """An AutoEncoder model, based upon incrementally downsampling CNNs to a flat code, and then upsampling CNNs.
+
+    The architecture is summarized as follows:
+
+    - The input is incrementally downsampled by two until it becomes :code:`[BASE_IMAGE_SIZE, BASE_IMAGE_SIZE]`.
+    - It is flattened, and there's a linear layer mapping it to a coding vector of size `code_size`.
+    - It is then unflattened, and there's a linear layer mapping it back to
+      :code:`[BASE_IMAGE_SIZE, BASE_IMAGE_SIZE]`.
+    - Is then upsampled incrementally by two until it becomes the original input-size again.
+    """
 
     def __init__(
         self,
@@ -35,14 +44,6 @@ class AutoEncoder(pl.LightningModule):
         number_filters: int = 4,
     ):
         """Creates an AutoEncoder Model, with an architecture as described in the class-level docstring.
-
-        The architecture is summarized as follows:
-
-        - The input is incrementally downsampled by two until it becomes :code:`[BASE_IMAGE_SIZE, BASE_IMAGE_SIZE]`.
-        - It is flattened, and there's a linear layer mapping it to a coding vector of size `code_size`.
-        - It is then unflattened, and there's a linear layer mapping it back to
-          :code:`[BASE_IMAGE_SIZE, BASE_IMAGE_SIZE]`.
-        - Is then upsampled incrementally by two until it becomes the original input-size again.
 
         :param number_channels: the number of channels in the input image e.g. 1 for grayscale, 3 for RGB.
         :param input_size: the width and height of images fed into the autoencoder. It should be a power of 2 and
@@ -101,17 +102,18 @@ class AutoEncoder(pl.LightningModule):
         return self.decoder(temp)
 
     def training_step(self, batch: List[torch.Tensor], batch_idx: int):
-        """Overrides :class:`pl.LightningModule`."""
+        """Overrides :class:`pl.LightningModule`. This docstring replaces the parent docstring which is errored."""
         return self._common_step(batch, batch_idx, "train")
 
     def validation_step(self, batch: List[torch.Tensor], batch_idx: int):
-        """Overrides :class:`pl.LightningModule`."""
+        """Overrides :class:`pl.LightningModule`. This docstring replaces the parent docstring which is errored."""
         self._common_step(batch, batch_idx, "val")
 
     def test_step(self, batch: List[torch.Tensor], batch_idx: int):
-        """Overrides :class:`pl.LightningModule`."""
+        """Overrides :class:`pl.LightningModule`. This docstring replaces the parent docstring which is errored."""
         self._common_step(batch, batch_idx, "test")
 
+    # Overrides :class:`pl.LightningModule`.
     def predict_step(self, batch, batch_idx: int, dataloader_idx: int = None):
         return self(batch)
 
