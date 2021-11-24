@@ -22,6 +22,8 @@ and then use these configuration file to perform the training::
 
 The outputted model is saved incrementally via checkpoints to a directory `lightning_logs` in the working directory
 (unless otherwise configured).
+
+The `predict` subcommand is not currently recommended for productive use.
 """
 __author__ = "Owen Feehan"
 __copyright__ = "Copyright 2021, Owen Feehan"
@@ -50,7 +52,7 @@ class _MyLightningCLI(cli.LightningCLI):
             "--show.reconstruction", default=True, required=False, type=bool
         )
 
-    def before_fit(self):
+    def before_fit(self) -> None:
         """Overrides :class:`cli.LightningCLI`. Print model architecture details to the console."""
 
         config_fit = self.config["fit"]
@@ -64,7 +66,7 @@ class _MyLightningCLI(cli.LightningCLI):
         )
         print(self.model)
 
-    def after_fit(self):
+    def after_fit(self) -> None:
         """Overrides :class:`cli.LightningCLI`. Plot the first batch: reconstructed against original."""
 
         # Write the encoder model as ONNX.
