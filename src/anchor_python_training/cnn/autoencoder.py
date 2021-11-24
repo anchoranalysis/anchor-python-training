@@ -2,21 +2,21 @@
 
 import torch.nn as nn
 import math
-from typing import Iterable, Callable
+from typing import Iterable, Callable, List, Union
 import pytorch_lightning as pl
 import torch.optim
 from torch.nn import functional as F
 
 
-BASE_IMAGE_SIZE = 16
+BASE_IMAGE_SIZE: int = 16
 """The width and neight that images are downsampled to before flattening it into a code."""
 
 
-_KERNEL_SIZE = 3
+_KERNEL_SIZE: int = 3
 """The size of each convolutional step."""
 
 
-_PADDING = 1
+_PADDING: int = 1
 """The padding, both input and output for filters."""
 
 
@@ -35,6 +35,14 @@ class AutoEncoder(pl.LightningModule):
         number_filters: int = 4,
     ):
         """Creates an AutoEncoder Model, with an architecture as described in the class-level docstring.
+
+        The architecture is summarized as follows:
+
+        - The input is incrementally downsampled by two until it becomes :code:`[BASE_IMAGE_SIZE, BASE_IMAGE_SIZE]`.
+        - It is flattened, and there's a linear layer mapping it to a coding vector of size `code_size`.
+        - It is then unflattened, and there's a linear layer mapping it back to
+          :code:`[BASE_IMAGE_SIZE, BASE_IMAGE_SIZE]`.
+        - Is then upsampled incrementally by two until it becomes the original input-size again.
 
         :param number_channels: the number of channels in the input image e.g. 1 for grayscale, 3 for RGB.
         :param input_size: the width and height of images fed into the autoencoder. It should be a power of 2 and
@@ -66,31 +74,55 @@ class AutoEncoder(pl.LightningModule):
             *_repeat_with_relu(rounds_downsampling, self._upsampling_conv_filter),
         )
 
-    def forward(self, activation):
+    def forward(
+        self, activation: Union[torch.Tensor, List[torch.Tensor]]
+    ) -> torch.Tensor:
         """Overrides :mod:`pl.LightningModule`."""
-        activation = self.encoder(activation)
-        activation = self.decoder(activation)
-        return activation
 
-    def training_step(self, batch, batch_idx):
-        """Overrides :mod:`pl.LightningModule`."""
+        # Perform only the encode step when predicting.
+
+        # When predicting, activation is both the input tensor and another.
+        # This ensures only the input tensor is used
+        # See https://github.com/PyTorchLightning/pytorch-lightning/issues/1137
+        if isinstance(activation, List):
+            activation = activation[0]
+
+        return self.encoder(activation)
+
+    def forward_encode_decode(
+        self, input: Union[torch.Tensor, List[torch.Tensor]]
+    ) -> torch.Tensor:
+        """Performs both the encode and decode step on an input (batched).
+
+        :param input: the input tensor.
+        :returns: the tensor after encoding and decoding.
+        """
+        temp = self.forward(input)
+        return self.decoder(temp)
+
+    def training_step(self, batch: List[torch.Tensor], batch_idx: int):
+        """Overrides :class:`pl.LightningModule`."""
         return self._common_step(batch, batch_idx, "train")
 
-    def validation_step(self, batch, batch_idx):
-        """Overrides :mod:`pl.LightningModule`."""
+    def validation_step(self, batch: List[torch.Tensor], batch_idx: int):
+        """Overrides :class:`pl.LightningModule`."""
         self._common_step(batch, batch_idx, "val")
 
-    def test_step(self, batch, batch_idx):
-        """Overrides :mod:`pl.LightningModule`."""
+    def test_step(self, batch: List[torch.Tensor], batch_idx: int):
+        """Overrides :class:`pl.LightningModule`."""
         self._common_step(batch, batch_idx, "test")
+
+    def predict_step(self, batch, batch_idx: int, dataloader_idx: int = None):
+        return self(batch)
 
     def configure_optimizers(self):
         """Overrides :mod:`pl.LightningModule`. This docstring replaces the parent docstring which is errored."""
         return torch.optim.Adam(self.parameters(), lr=1e-3)
 
-    def _common_step(self, batch, batch_idx, stage: str):
+    def _common_step(self, batch: List[torch.Tensor], batch_idx: int, stage: str):
         x, _ = batch
-        x_hat = self(x)
+        x_hat = self.encoder(x)
+        x_hat = self.decoder(x_hat)
         loss = F.mse_loss(x, x_hat)
         self.log(f"loss/{stage}", loss, on_step=True)
         return loss
@@ -151,7 +183,7 @@ def _repeat_with_relu(
 
 
 def _calculate_rounds_downsampling(input_size: int) -> int:
-    """Calculates how many rounds downsamling is needed so that the input becomes :const:`BASE_IMAGE_SIZE`.
+    """Calculates how many rounds downsampling is needed so that the input becomes :const:`BASE_IMAGE_SIZE`.
 
     A check occurs that :code:`input_size` fulfills the necessary criteria.
     """
