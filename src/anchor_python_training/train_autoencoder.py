@@ -1,83 +1,74 @@
-# Thanks to https://gist.github.com/AFAgarap/4f8a8d8edf352271fa06d85ba0361f26 for inspiration.
+"""Trains (or validates etc.) an AutoEncoder model against images using the PyTorch Lightning Command Line Infterface.
 
+Please see :class:`cnn.AutoEncoder` for details of the auto-encoder architecture.
 
-import numpy as np
+Input Arguments
+===============
+
+Please see `PyTorch Lightning CLI <https://pytorch-lightning.readthedocs.io/en/stable/common/lightning_cli.html>`_ for
+details on how to use the command line interface.
+
+As a suggestion, first create a configuration file by saving the contents to e.g. `config.yaml`::
+
+    python -m anchor_python_training.train_autoencoder fit --print_config
+
+and then use these configuration file to perform the training::
+
+    python -m anchor_python_training.train_autoencoder fit --config config.yaml
+
+The outputted model is saved incrementally via checkpoints to a directory `lightning_logs` in the working directory
+(unless otherwise configured).
+"""
+__author__ = "Owen Feehan"
+__copyright__ = "Copyright 2021, Owen Feehan"
+
 
 import torch
-import torch.nn as nn
 import torchinfo
 
-from typing import Iterable
-from anchor_python_training import visualize, data, cnn, train
-import pytorch_lightning as pl
+from anchor_python_training import visualize, data, cnn
+from pytorch_lightning.utilities import cli
+
+
+class _MyLightningCLI(cli.LightningCLI):
+    """Customized CLI implementation."""
+
+    def add_arguments_to_parser(self, parser):
+        parser.link_arguments(
+            "data.rgb", "model.number_channels", compute_fn=_number_channels
+        )
+        parser.link_arguments("model.input_size", "data.image_size")
+
+    def before_fit(self):
+        # Print model architecture details to the console.
+        config_fit = self.config["fit"]
+        input_size = config_fit["model"]["input_size"]
+        rgb = config_fit["data"]["rgb"]
+        print(
+            torchinfo.summary(
+                self.model, (8, _number_channels(rgb), input_size, input_size)
+            )
+        )
+        print(self.model)
+
+    def after_fit(self):
+        # Plot the first batch: reconstructed against original
+        model = self.model.to(torch.device("cpu"))
+        visualize.plot_reconstruction_on_first_batch(
+            self.datamodule.validation_data, model
+        )
 
 
 def main():
-    input_size = 64
-
-    train_data, validation_data = data.load_images_split(
-        r"D:\Users\owen\Pictures\To Give To Naemi 2021\Ticino Weekend (March 2021)",
-        [input_size, input_size],
-        "jpg",
-        batch_size = 4
-    )
-
-    class DataModule(pl.LightningModule):
-
-        def setup(self, stage=None):
-            self._train_data, self._validation_data = data.load_images_split(
-                r"D:\Users\owen\Pictures\To Give To Naemi 2021\Ticino Weekend (March 2021)",
-                [input_size, input_size],
-                "jpg",
-            )
-
-        def train_dataloader(self):
-            return self._train_data
-
-        def val_dataloader(self):
-            return self._validation_data
-
-    model = cnn.AutoEncoder(number_channels=3, input_size=input_size, code_size=128)
-
-    print(torchinfo.summary(model, (8, 3, input_size, input_size)))
-    print(model)
-
-    trainer = pl.Trainer(gpus=1, max_epochs=1000, precision=16, log_every_n_steps=1)
-    trainer.fit(model, train_data, validation_data)
-
-    #train.train_model(train_data, validation_data, model, loss=nn.MSELoss(), epochs=50)
-
-    model = model.to(torch.device("cpu"))
-    _plot_reconstruction_on_samples(validation_data, model)
+    _MyLightningCLI(cnn.AutoEncoder, data.LoadImagesModule)
 
 
-def _plot_reconstruction_on_samples(
-    test_loader: torch.utils.data.DataLoader,
-    model_reconstructing: nn.Module,
-    number_images: int = 10,
-) -> None:
-    """Plots a random sample of reconstructed images (from the autoencoder) against the original images."""
-
-    test_examples = None
-
-    with torch.no_grad():
-        for batch_features in test_loader:
-            test_examples = batch_features[0]
-            reconstruction = model_reconstructing(test_examples)
-            break
-
-    visualize.plot_images_two_rows(
-        _images_from_tensor(test_examples),
-        _images_from_tensor(reconstruction),
-        number_images,
-    )
-
-
-def _images_from_tensor(images: torch.Tensor) -> Iterable[np.ndarray]:
-    """Converts a tensor to an iterable of images, converting each image to an appropriately sized numpy array."""
-    for index in range(images.size()[0]):
-        # Convert from PyTorch RGB format (3, y, x) to Numpy expected RGB format (y, x, 3)
-        yield images[index].permute(1, 2, 0).numpy()
+def _number_channels(rgb: bool) -> int:
+    """Determines the number of channels corresponding to a RGB flag."""
+    if rgb:
+        return 3
+    else:
+        return 1
 
 
 if __name__ == "__main__":

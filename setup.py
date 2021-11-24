@@ -1,5 +1,5 @@
 """
-    Setup file for anchor-python-training.
+    Setup file for anchor_python_training.
     Use setup.cfg to configure your project.
 
     This file was generated with PyScaffold 4.0.2.

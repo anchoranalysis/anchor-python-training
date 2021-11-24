@@ -4,36 +4,39 @@ anchor-python-training
 
 This is the documentation of **anchor-python-training**.
 
-.. note::
 
-    This is the main page of your project's `Sphinx`_ documentation.
-    It is formatted in `reStructuredText`_. Add additional pages
-    by creating rst-files in ``docs`` and adding them to the `toctree`_ below.
-    Use then `references`_ in order to link them from this page, e.g.
-    :ref:`authors` and :ref:`changes`.
+Introduction
+============
 
-    It is also possible to refer to the documentation of other Python packages
-    with the `Python domain syntax`_. By default you can reference the
-    documentation of `Sphinx`_, `Python`_, `NumPy`_, `SciPy`_, `matplotlib`_,
-    `Pandas`_, `Scikit-Learn`_. You can add more by extending the
-    ``intersphinx_mapping`` in your Sphinx's ``conf.py``.
+Scripts in Python to train various types of CNN-models from images (using PyTorch).
 
-    The pretty useful extension `autodoc`_ is activated by default and lets
-    you include documentation from docstrings. Docstrings can be written in
-    `Google style`_ (recommended!), `NumPy style`_ and `classical style`_.
+They are installed collectively as a package `anchor_python_training`.
+
+Usage
+=====
+
+Each `.py` script in the top-level directory of `src/anchor_python_training <https://github.com/anchoranalysis/anchor-python-training/tree/master/src/anchor_python_training>`_ is designed as a command-line application.
+
+Please first install the package, by:
+
+* `pip install .` (in the root of the checked out repository) or
+* `pip install git+https://github.com/anchoranalysis/anchor-python-training.git`
+
+A script can then be called from the command-line with the `-m` argument, ala::
+
+   python -m anchor_python_training.script_top_level_name --somearg
+
+Top-Level Scripts
+=================
+
+- :ref:`train_autoencoder <autoapi/train_autoencoder/index:Input Arguments>` - trains a CNN-based autoencoder from images (`source <https://github.com/anchoranalysis/anchor-python-training/blob/master/src/anchor_python_training/train_autoencoder.py>`_).
 
 
-Contents
-========
+API
+===
 
 .. toctree::
-   :maxdepth: 2
-
-   Overview <readme>
-   License <license>
-   Authors <authors>
-   Changelog <changelog>
-   Module Reference <api/modules>
+   :maxdepth: 4
 
 
 Indices and tables

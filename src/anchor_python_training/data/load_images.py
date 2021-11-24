@@ -1,83 +1,134 @@
+"""Routines to load images from the file-system and split into different training, validation, test etc. datasets."""
+import PIL.Image
 import torch
 import torchvision
-import PIL
-import pathlib
 
 
 from typing import Tuple
+from ._recursive_images_dataset import RecursiveImagesDataset
 
 
-class _RecursiveImagesDataset(torch.utils.data.Dataset):
-    """Finds images in a particular directory recursively."""
-
-    def __init__(self, image_directory: str, extension: str, transform=None):
-        """Creates for a particular directory and file extension.
-
-        :param image_directory: the directory to search for images recursively in.
-        :param extension: the file extension (without a leading period) which all images must end with.
-        :param transform: an optional transformation that is applied to each image after it is loaded.
-        """
-        self._paths = list(pathlib.Path(image_directory).rglob(f"*.{extension}"))
-        self._transform = transform
-
-    def __getitem__(self, index):
-        path = self._paths[index]
-        image = PIL.Image.open(path)
-        if self._transform is not None:
-            image = self._transform(image)
-        # use 1 as an arbitrary label, as all images have the same label.
-        return image, 1
-
-    def __len__(self):
-        return len(self._paths)
-
-
-def load_images_split(
+def load_images_split_two(
     image_directory: str,
     image_size: Tuple[int, int],
     extension: str = "jpg",
+    rgb: bool = True,
     batch_size: int = 16,
-    shuffle: bool = True,
-    ratio_split: float = 0.7,
+    number_workers: int = 1,
+    ratio_validation: float = 0.3,
 ) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
-    """Load all images recursively from a directory, and split into a training and validation batch.
+    """Load all images recursively from a directory, and split into *training and validation batches*.
 
     :param image_directory: the image directory to load images recursively from.
     :param image_size: the size (height, width) to resize all images to.
     :param extension: the extension (without a leading period) that all image files must match.
+    :param rgb: when true, images are always loaded as RGB. when false, they are loaded as grayscale.
     :param batch_size: how many images should be in a batch.
-    :param shuffle: whether to shuffle the order of images.
-    :param ratio_split: a number between 0 and 1 determining linearly how many elements belong in the first set e.g.
-                        0.6 would try and place 60% approximately of elements into the first partition.
+    :param number_workers: the number of workers for the data-loader.
+    :param ratio_validation: a number between 0 and 1 determining linearly how many elements belong in the validation
+                             set e.g. 0.4 would try and place 40% approximately of elements into the second partition.
     :returns: the loaded images, split into training and validation data respectively.
     """
-    dataset = _dataset(image_directory, image_size, extension)
+    dataset = _dataset(image_directory, image_size, extension, rgb)
 
-    number_first, number_second = _calculate_splits(len(dataset), ratio_split)
+    number_first, number_second = _calculate_splits(
+        len(dataset), 1.0 - ratio_validation
+    )
 
     train_set, val_set = torch.utils.data.random_split(
         dataset,
         [number_first, number_second],
-        generator=torch.Generator().manual_seed(42),
+        generator=torch.Generator(),
     )
 
-    def _loader(dataset: torch.utils.data.Dataset, shuffle: bool) -> torch.utils.data.Dataset:
+    def _loader(dataset: torch.utils.data.Dataset) -> torch.utils.data.Dataset:
         return torch.utils.data.DataLoader(
-            dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4
+            dataset, batch_size=batch_size, num_workers=number_workers
         )
 
-    return _loader(train_set, True), _loader(val_set, False)
+    return _loader(train_set), _loader(val_set)
+
+
+def load_images_split_three(
+    image_directory: str,
+    image_size: Tuple[int, int],
+    extension: str = "jpg",
+    rgb: bool = True,
+    batch_size: int = 16,
+    number_workers: int = 1,
+    ratio_validation: float = 0.3,
+    ratio_test: float = 0.2,
+) -> Tuple[
+    torch.utils.data.DataLoader,
+    torch.utils.data.DataLoader,
+    torch.utils.data.DataLoader,
+]:
+    """Load all images recursively from a directory, and split into *training, validation and test batches*.
+
+    :param image_directory: the image directory to load images recursively from.
+    :param image_size: the size (height, width) to resize all images to.
+    :param extension: the extension (without a leading period) that all image files must match.
+    :param rgb: when true, images are always loaded as RGB. when false, they are loaded as grayscale.
+    :param batch_size: how many images should be in a batch.
+    :param number_workers: the number of workers for the data-loader.
+    :param ratio_validation: a number between 0 and 1 determining linearly how many elements belong in the validation
+                             set e.g. 0.4 would try and place 40% approximately of elements into the second batch.
+    :param ratio_test: a number between 0 and 1 determining linearly how many elements belong in the validation
+                             set e.g. 0.2 would try and place 20% approximately of elements into the third batch.
+    :returns: the loaded images, split into training and validation data and test data respectively.
+    """
+    dataset = _dataset(image_directory, image_size, extension, rgb)
+
+    number_images = len(dataset)
+    _, number_second = _calculate_splits(number_images, 1.0 - ratio_validation)
+    _, number_third = _calculate_splits(number_images, 1.0 - ratio_test)
+    number_first = number_images - number_second - number_third
+
+    train_set, val_set, test_set = torch.utils.data.random_split(
+        dataset,
+        [number_first, number_second, number_third],
+        generator=torch.Generator(),
+    )
+
+    def _loader(dataset: torch.utils.data.Dataset) -> torch.utils.data.Dataset:
+        return torch.utils.data.DataLoader(
+            dataset, batch_size=batch_size, shuffle=False, num_workers=number_workers
+        )
+
+    return _loader(train_set), _loader(val_set), _loader(test_set)
+
+
+class _UnifyNumberChannels(object):
+    """Transform PIL images so that they have the desired number of channels."""
+
+    def __init__(self, rgb: bool):
+        """Creates to unify to either RGB (three channels) or grayscale (single channel).
+
+        :param rgb: true, indicates images should be converted (where necessary) to 3 channels. false to 1 channel.
+        """
+        self._rgb = rgb
+
+    def __call__(self, image: PIL.Image.Image) -> PIL.Image.Image:
+        return image.convert("RGB" if self._rgb else "L")
+
+    def __repr__(self):
+        return self.__class__.__name__ + "()"
 
 
 def _dataset(
-    image_directory: str, image_size: Tuple[int, int], extension: str
+    image_directory: str, image_size: Tuple[int, int], extension: str, rgb: bool
 ) -> torch.utils.data.Dataset:
+
     """Loads the images recursively into a dataset."""
     transform = torchvision.transforms.Compose(
-        [torchvision.transforms.Resize(image_size), torchvision.transforms.ToTensor()]
+        [
+            torchvision.transforms.Resize(image_size),
+            _UnifyNumberChannels(rgb),
+            torchvision.transforms.ToTensor(),
+        ]
     )
 
-    return _RecursiveImagesDataset(image_directory, extension, transform=transform)
+    return RecursiveImagesDataset(image_directory, extension, transform=transform)
 
 
 def _calculate_splits(number_elements: int, ratio_split: float) -> Tuple[int, int]:

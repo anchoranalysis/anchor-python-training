@@ -1,5 +1,14 @@
 # Requirements file for ReadTheDocs, check .readthedocs.yml.
 # To build the module reference correctly, make sure every external package
 # under `install_requires` in `setup.cfg` is also listed here!
-sphinx>=3.2.1
-# sphinx_rtd_theme
+git+https://github.com/anchoranalysis/anchor-python-sphinx.git#egg=anchor_python_sphinx
+git+https://github.com/anchoranalysis/anchor-python-utilities.git#egg=anchor_python_utilities
+torch
+torchvision
+typed-argument-parser
+numpy
+opencv-python
+matplotlib
+torchinfo
+pytorch_lightning
+jsonargparse[signatures]
