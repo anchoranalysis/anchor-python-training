@@ -107,19 +107,22 @@
         <span class="n">parser</span><span class="o">.</span><span class="n">link_arguments</span><span class="p">(</span><span class="s2">&quot;model.input_size&quot;</span><span class="p">,</span> <span class="s2">&quot;data.image_size&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">before_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1"># Print model architecture details to the console.</span>
+        <span class="sd">&quot;&quot;&quot;Overrides :class:`cli.LightningCLI`. Print model architecture details to the console.&quot;&quot;&quot;</span>
+
         <span class="n">config_fit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;fit&quot;</span><span class="p">]</span>
         <span class="n">input_size</span> <span class="o">=</span> <span class="n">config_fit</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">][</span><span class="s2">&quot;input_size&quot;</span><span class="p">]</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">config_fit</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">][</span><span class="s2">&quot;batch_size&quot;</span><span class="p">]</span>
         <span class="n">rgb</span> <span class="o">=</span> <span class="n">config_fit</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">][</span><span class="s2">&quot;rgb&quot;</span><span class="p">]</span>
         <span class="nb">print</span><span class="p">(</span>
             <span class="n">torchinfo</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="n">_number_channels</span><span class="p">(</span><span class="n">rgb</span><span class="p">),</span> <span class="n">input_size</span><span class="p">,</span> <span class="n">input_size</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">_number_channels</span><span class="p">(</span><span class="n">rgb</span><span class="p">),</span> <span class="n">input_size</span><span class="p">,</span> <span class="n">input_size</span><span class="p">)</span>
             <span class="p">)</span>
         <span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">after_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1"># Plot the first batch: reconstructed against original</span>
+        <span class="sd">&quot;&quot;&quot;Overrides :class:`cli.LightningCLI`. Plot the first batch: reconstructed against original.&quot;&quot;&quot;</span>
+
         <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cpu&quot;</span><span class="p">))</span>
         <span class="n">visualize</span><span class="o">.</span><span class="n">plot_reconstruction_on_first_batch</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="o">.</span><span class="n">validation_data</span><span class="p">,</span> <span class="n">model</span>
