@@ -40,19 +40,22 @@ class _MyLightningCLI(cli.LightningCLI):
         parser.link_arguments("model.input_size", "data.image_size")
 
     def before_fit(self):
-        # Print model architecture details to the console.
+        """Overrides :class:`cli.LightningCLI`. Print model architecture details to the console."""
+
         config_fit = self.config["fit"]
         input_size = config_fit["model"]["input_size"]
+        batch_size = config_fit["model"]["batch_size"]
         rgb = config_fit["data"]["rgb"]
         print(
             torchinfo.summary(
-                self.model, (8, _number_channels(rgb), input_size, input_size)
+                self.model, (batch_size, _number_channels(rgb), input_size, input_size)
             )
         )
         print(self.model)
 
     def after_fit(self):
-        # Plot the first batch: reconstructed against original
+        """Overrides :class:`cli.LightningCLI`. Plot the first batch: reconstructed against original."""
+
         model = self.model.to(torch.device("cpu"))
         visualize.plot_reconstruction_on_first_batch(
             self.datamodule.validation_data, model
