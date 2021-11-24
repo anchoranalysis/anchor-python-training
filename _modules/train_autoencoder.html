@@ -65,7 +65,7 @@
            <div itemprop="articleBody">
              
   <h1>Source code for train_autoencoder</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Trains (or validates etc.) an AutoEncoder model against images using the PyTorch Lightning Command Line Infterface.</span>
+<span></span><span class="sd">&quot;&quot;&quot;Trains (or validates etc.) an AutoEncoder model against images using the PyTorch Lightning Command Line Interface.</span>
 
 <span class="sd">Please see :class:`cnn.AutoEncoder` for details of the auto-encoder architecture.</span>
 
@@ -74,6 +74,10 @@
 
 <span class="sd">Please see `PyTorch Lightning CLI &lt;https://pytorch-lightning.readthedocs.io/en/stable/common/lightning_cli.html&gt;`_ for</span>
 <span class="sd">details on how to use the command line interface.</span>
+
+<span class="sd">The help page prints all options::</span>
+
+<span class="sd">    python -m anchor_python_training.train_autoencoder -h</span>
 
 <span class="sd">As a suggestion, first create a configuration file by saving the contents to e.g. `config.yaml`::</span>
 
@@ -85,6 +89,8 @@
 
 <span class="sd">The outputted model is saved incrementally via checkpoints to a directory `lightning_logs` in the working directory</span>
 <span class="sd">(unless otherwise configured).</span>
+
+<span class="sd">The `predict` subcommand is not currently recommended for productive use.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="n">__author__</span> <span class="o">=</span> <span class="s2">&quot;Owen Feehan&quot;</span>
 <span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">&quot;Copyright 2021, Owen Feehan&quot;</span>
@@ -92,6 +98,7 @@
 
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torchinfo</span>
+<span class="kn">import</span> <span class="nn">os</span>
 
 <span class="kn">from</span> <span class="nn">anchor_python_training</span> <span class="kn">import</span> <span class="n">visualize</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">cnn</span>
 <span class="kn">from</span> <span class="nn">pytorch_lightning.utilities</span> <span class="kn">import</span> <span class="n">cli</span>
@@ -105,13 +112,19 @@
             <span class="s2">&quot;data.rgb&quot;</span><span class="p">,</span> <span class="s2">&quot;model.number_channels&quot;</span><span class="p">,</span> <span class="n">compute_fn</span><span class="o">=</span><span class="n">_number_channels</span>
         <span class="p">)</span>
         <span class="n">parser</span><span class="o">.</span><span class="n">link_arguments</span><span class="p">(</span><span class="s2">&quot;model.input_size&quot;</span><span class="p">,</span> <span class="s2">&quot;data.image_size&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+            <span class="s2">&quot;--write.onnx.encoder&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">bool</span>
+        <span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+            <span class="s2">&quot;--show.reconstruction&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">bool</span>
+        <span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">before_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">before_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Overrides :class:`cli.LightningCLI`. Print model architecture details to the console.&quot;&quot;&quot;</span>
 
         <span class="n">config_fit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;fit&quot;</span><span class="p">]</span>
         <span class="n">input_size</span> <span class="o">=</span> <span class="n">config_fit</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">][</span><span class="s2">&quot;input_size&quot;</span><span class="p">]</span>
-        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">config_fit</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">][</span><span class="s2">&quot;batch_size&quot;</span><span class="p">]</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">config_fit</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">][</span><span class="s2">&quot;batch_size&quot;</span><span class="p">]</span>
         <span class="n">rgb</span> <span class="o">=</span> <span class="n">config_fit</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">][</span><span class="s2">&quot;rgb&quot;</span><span class="p">]</span>
         <span class="nb">print</span><span class="p">(</span>
             <span class="n">torchinfo</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span>
@@ -120,17 +133,52 @@
         <span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">after_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">after_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Overrides :class:`cli.LightningCLI`. Plot the first batch: reconstructed against original.&quot;&quot;&quot;</span>
 
-        <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cpu&quot;</span><span class="p">))</span>
-        <span class="n">visualize</span><span class="o">.</span><span class="n">plot_reconstruction_on_first_batch</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="o">.</span><span class="n">validation_data</span><span class="p">,</span> <span class="n">model</span>
-        <span class="p">)</span>
+        <span class="c1"># Write the encoder model as ONNX.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;fit&quot;</span><span class="p">][</span><span class="s2">&quot;write&quot;</span><span class="p">][</span><span class="s2">&quot;onnx&quot;</span><span class="p">][</span><span class="s2">&quot;encoder&quot;</span><span class="p">]:</span>
+            <span class="n">_write_onnx</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trainer</span><span class="o">.</span><span class="n">log_dir</span><span class="p">,</span>
+                <span class="s2">&quot;encoder&quot;</span><span class="p">,</span>
+                <span class="n">_extract_first_batch_from_loader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="o">.</span><span class="n">train_data</span><span class="p">),</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Show examples of the first batch, input versus reconstructed.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;fit&quot;</span><span class="p">][</span><span class="s2">&quot;show&quot;</span><span class="p">][</span><span class="s2">&quot;reconstruction&quot;</span><span class="p">]:</span>
+            <span class="n">visualize</span><span class="o">.</span><span class="n">plot_reconstruction_on_first_batch</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="o">.</span><span class="n">validation_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">forward_encode_decode</span>
+            <span class="p">)</span>
 
 
 <div class="viewcode-block" id="main"><a class="viewcode-back" href="../autoapi/train_autoencoder/index.html#train_autoencoder.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
     <span class="n">_MyLightningCLI</span><span class="p">(</span><span class="n">cnn</span><span class="o">.</span><span class="n">AutoEncoder</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">LoadImagesModule</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_write_onnx</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">filename_without_extension</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">example_input</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Write a model to the file-system as ONNX.</span>
+
+<span class="sd">    :param model: the model to write as ONNX.</span>
+<span class="sd">    :param directory: the directory to write the model to.</span>
+<span class="sd">    :param filename_without_extension: the name of the file (without the .onnx extension) to write the model to.</span>
+<span class="sd">    :param data_loader: a data-loader, the first batch of whom is used to get an example input, as needed to write ONNX.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">filename_without_extension</span> <span class="o">+</span> <span class="s2">&quot;.onnx&quot;</span><span class="p">)</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">onnx</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">example_input</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">export_params</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_extract_first_batch_from_loader</span><span class="p">(</span>
+    <span class="n">loader</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Extracts the first batch from a data-loader.&quot;&quot;&quot;</span>
+    <span class="n">first_batch</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">loader</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">first_batch</span>
 
 
 <span class="k">def</span> <span class="nf">_number_channels</span><span class="p">(</span><span class="n">rgb</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>

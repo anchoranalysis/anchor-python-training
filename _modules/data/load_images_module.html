@@ -66,8 +66,9 @@
              
   <h1>Source code for data.load_images_module</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;A Lightning data-module for loading images recursively from a file-system directory.&quot;&quot;&quot;</span>
-<span class="kn">from</span> <span class="nn">.load_images</span> <span class="kn">import</span> <span class="n">load_images_split_three</span>
+<span class="kn">from</span> <span class="nn">.load_images</span> <span class="kn">import</span> <span class="n">ImageLoader</span>
 <span class="kn">import</span> <span class="nn">pytorch_lightning</span> <span class="k">as</span> <span class="nn">pl</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
 
 
 <div class="viewcode-block" id="LoadImagesModule"><a class="viewcode-back" href="../../autoapi/data/load_images_module/index.html#data.LoadImagesModule">[docs]</a><span class="k">class</span> <span class="nc">LoadImagesModule</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">LightningDataModule</span><span class="p">):</span>
@@ -80,7 +81,7 @@
         <span class="n">extension</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;jpg&quot;</span><span class="p">,</span>
         <span class="n">rgb</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span><span class="p">,</span>
-        <span class="n">number_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">num_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
         <span class="n">ratio_validation</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">,</span>
         <span class="n">ratio_test</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span>
     <span class="p">):</span>
@@ -91,7 +92,7 @@
 <span class="sd">        :param extension: the extension (without a leading period) that all image files must match.</span>
 <span class="sd">        :param rgb: when true, images are always loaded as RGB. when false, they are loaded as grayscale.</span>
 <span class="sd">        :param batch_size: how many images should be in a batch.</span>
-<span class="sd">        :param number_workers: the number of workers for the data-loader.</span>
+<span class="sd">        :param num_workers: the number of workers for the data-loader.</span>
 <span class="sd">        :param ratio_validation: a number between 0 and 1 determining linearly how many elements belong in the</span>
 <span class="sd">                                 validation set e.g. 0.4 would try and place 40% approximately of elements into the</span>
 <span class="sd">                                 second batch.</span>
@@ -99,30 +100,41 @@
 <span class="sd">                           set e.g. 0.2 would try and place 20% approximately of elements into the third batch.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-        <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">test_data</span><span class="p">,</span>
-        <span class="p">)</span> <span class="o">=</span> <span class="n">load_images_split_three</span><span class="p">(</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span> <span class="o">=</span> <span class="n">ImageLoader</span><span class="p">(</span>
             <span class="n">image_directory</span><span class="p">,</span>
             <span class="p">[</span><span class="n">image_size</span><span class="p">,</span> <span class="n">image_size</span><span class="p">],</span>
             <span class="n">extension</span><span class="p">,</span>
             <span class="n">rgb</span><span class="p">,</span>
             <span class="n">batch_size</span><span class="p">,</span>
-            <span class="n">number_workers</span><span class="p">,</span>
-            <span class="n">ratio_validation</span><span class="p">,</span>
-            <span class="n">ratio_test</span><span class="p">,</span>
+            <span class="n">num_workers</span><span class="p">,</span>
         <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ratio_validation</span> <span class="o">=</span> <span class="n">ratio_validation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ratio_test</span> <span class="o">=</span> <span class="n">ratio_test</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">predict_data</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">test_data</span> <span class="o">=</span> <span class="kc">None</span>
 
 <div class="viewcode-block" id="LoadImagesModule.prepare_data"><a class="viewcode-back" href="../../autoapi/data/load_images_module/index.html#data.LoadImagesModule.prepare_data">[docs]</a>    <span class="k">def</span> <span class="nf">prepare_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Overrides :class:`pl.LightningDataModule`.&quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
 
-    <span class="c1">#</span>
-<div class="viewcode-block" id="LoadImagesModule.setup"><a class="viewcode-back" href="../../autoapi/data/load_images_module/index.html#data.LoadImagesModule.setup">[docs]</a>    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="LoadImagesModule.setup"><a class="viewcode-back" href="../../autoapi/data/load_images_module/index.html#data.LoadImagesModule.setup">[docs]</a>    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pl</span><span class="o">.</span><span class="n">trainer</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">TrainerFn</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Overrides :class:`pl.LightningDataModule`.&quot;&quot;&quot;</span>
         <span class="c1"># Load images normally occurs here, but we&#39;ve already done it in the constructor.</span>
-        <span class="k">pass</span></div>
+        <span class="k">if</span> <span class="n">stage</span> <span class="o">==</span> <span class="n">pl</span><span class="o">.</span><span class="n">trainer</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">TrainerFn</span><span class="o">.</span><span class="n">PREDICTING</span><span class="p">:</span>
+            <span class="c1"># Load images all as one</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">predict_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="o">.</span><span class="n">load_images</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Load images split into three sets.</span>
+            <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">test_data</span><span class="p">,</span>
+            <span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="o">.</span><span class="n">load_images_split_three</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_ratio_validation</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_ratio_test</span><span class="p">,</span></div>
+            <span class="p">)</span>
 
 <div class="viewcode-block" id="LoadImagesModule.train_dataloader"><a class="viewcode-back" href="../../autoapi/data/load_images_module/index.html#data.LoadImagesModule.train_dataloader">[docs]</a>    <span class="k">def</span> <span class="nf">train_dataloader</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Overrides :class:`pl.LightningDataModule`.&quot;&quot;&quot;</span>
@@ -134,7 +146,11 @@
 
 <div class="viewcode-block" id="LoadImagesModule.test_dataloader"><a class="viewcode-back" href="../../autoapi/data/load_images_module/index.html#data.LoadImagesModule.test_dataloader">[docs]</a>    <span class="k">def</span> <span class="nf">test_dataloader</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Overrides :class:`pl.LightningDataModule`.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_data</span></div></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_data</span></div>
+
+<div class="viewcode-block" id="LoadImagesModule.predict_dataloader"><a class="viewcode-back" href="../../autoapi/data/load_images_module/index.html#data.LoadImagesModule.predict_dataloader">[docs]</a>    <span class="k">def</span> <span class="nf">predict_dataloader</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Overrides :class:`pl.LightningDataModule`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">predict_data</span></div></div>
 </pre></div>
 
            </div>

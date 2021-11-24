@@ -24,7 +24,7 @@ Classes
 
 
 
-.. py:class:: LoadImagesModule(image_directory: str, image_size: int, extension: str = 'jpg', rgb: bool = True, batch_size: int = 16, number_workers: int = 1, ratio_validation: float = 0.3, ratio_test: float = 0.2)
+.. py:class:: LoadImagesModule(image_directory: str, image_size: int, extension: str = 'jpg', rgb: bool = True, batch_size: int = 16, num_workers: int = 1, ratio_validation: float = 0.3, ratio_test: float = 0.2)
 
    Bases: :py:obj:`pytorch_lightning.LightningDataModule`
 
@@ -35,7 +35,7 @@ Classes
       Overrides :class:`pl.LightningDataModule`.
 
 
-   .. py:method:: setup(self, stage=None)
+   .. py:method:: setup(self, stage: Optional[pytorch_lightning.trainer.states.TrainerFn] = None)
 
       Overrides :class:`pl.LightningDataModule`.
 
@@ -51,6 +51,11 @@ Classes
 
 
    .. py:method:: test_dataloader(self)
+
+      Overrides :class:`pl.LightningDataModule`.
+
+
+   .. py:method:: predict_dataloader(self)
 
       Overrides :class:`pl.LightningDataModule`.
 

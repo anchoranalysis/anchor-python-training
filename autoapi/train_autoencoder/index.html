@@ -67,12 +67,16 @@
              
   <section id="module-train_autoencoder">
 <span id="train-autoencoder"></span><h1><a class="reference internal" href="#module-train_autoencoder" title="train_autoencoder"><code class="xref py py-mod docutils literal notranslate"><span class="pre">train_autoencoder</span></code></a><a class="headerlink" href="#module-train_autoencoder" title="Permalink to this headline"></a></h1>
-<p>Trains (or validates etc.) an AutoEncoder model against images using the PyTorch Lightning Command Line Infterface.</p>
+<p>Trains (or validates etc.) an AutoEncoder model against images using the PyTorch Lightning Command Line Interface.</p>
 <p>Please see <a class="reference internal" href="../cnn/index.html#cnn.AutoEncoder" title="cnn.AutoEncoder"><code class="xref py py-class docutils literal notranslate"><span class="pre">cnn.AutoEncoder</span></code></a> for details of the auto-encoder architecture.</p>
 <section id="input-arguments">
 <h2>Input Arguments<a class="headerlink" href="#input-arguments" title="Permalink to this headline"></a></h2>
 <p>Please see <a class="reference external" href="https://pytorch-lightning.readthedocs.io/en/stable/common/lightning_cli.html">PyTorch Lightning CLI</a> for
 details on how to use the command line interface.</p>
+<p>The help page prints all options:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">anchor_python_training</span><span class="o">.</span><span class="n">train_autoencoder</span> <span class="o">-</span><span class="n">h</span>
+</pre></div>
+</div>
 <p>As a suggestion, first create a configuration file by saving the contents to e.g. <cite>config.yaml</cite>:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">anchor_python_training</span><span class="o">.</span><span class="n">train_autoencoder</span> <span class="n">fit</span> <span class="o">--</span><span class="n">print_config</span>
 </pre></div>
@@ -83,6 +87,7 @@ details on how to use the command line interface.</p>
 </div>
 <p>The outputted model is saved incrementally via checkpoints to a directory <cite>lightning_logs</cite> in the working directory
 (unless otherwise configured).</p>
+<p>The <cite>predict</cite> subcommand is not currently recommended for productive use.</p>
 </section>
 <section id="module-contents">
 <h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline"></a></h2>

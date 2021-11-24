@@ -69,21 +69,21 @@
 
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
 <span class="kn">import</span> <span class="nn">math</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Callable</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Union</span>
 <span class="kn">import</span> <span class="nn">pytorch_lightning</span> <span class="k">as</span> <span class="nn">pl</span>
 <span class="kn">import</span> <span class="nn">torch.optim</span>
 <span class="kn">from</span> <span class="nn">torch.nn</span> <span class="kn">import</span> <span class="n">functional</span> <span class="k">as</span> <span class="n">F</span>
 
 
-<div class="viewcode-block" id="BASE_IMAGE_SIZE"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.BASE_IMAGE_SIZE">[docs]</a><span class="n">BASE_IMAGE_SIZE</span> <span class="o">=</span> <span class="mi">16</span></div>
+<div class="viewcode-block" id="BASE_IMAGE_SIZE"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.BASE_IMAGE_SIZE">[docs]</a><span class="n">BASE_IMAGE_SIZE</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span></div>
 <span class="sd">&quot;&quot;&quot;The width and neight that images are downsampled to before flattening it into a code.&quot;&quot;&quot;</span>
 
 
-<span class="n">_KERNEL_SIZE</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">_KERNEL_SIZE</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span>
 <span class="sd">&quot;&quot;&quot;The size of each convolutional step.&quot;&quot;&quot;</span>
 
 
-<span class="n">_PADDING</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">_PADDING</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
 <span class="sd">&quot;&quot;&quot;The padding, both input and output for filters.&quot;&quot;&quot;</span>
 
 
@@ -102,6 +102,14 @@
         <span class="n">number_filters</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Creates an AutoEncoder Model, with an architecture as described in the class-level docstring.</span>
+
+<span class="sd">        The architecture is summarized as follows:</span>
+
+<span class="sd">        - The input is incrementally downsampled by two until it becomes :code:`[BASE_IMAGE_SIZE, BASE_IMAGE_SIZE]`.</span>
+<span class="sd">        - It is flattened, and there&#39;s a linear layer mapping it to a coding vector of size `code_size`.</span>
+<span class="sd">        - It is then unflattened, and there&#39;s a linear layer mapping it back to</span>
+<span class="sd">          :code:`[BASE_IMAGE_SIZE, BASE_IMAGE_SIZE]`.</span>
+<span class="sd">        - Is then upsampled incrementally by two until it becomes the original input-size again.</span>
 
 <span class="sd">        :param number_channels: the number of channels in the input image e.g. 1 for grayscale, 3 for RGB.</span>
 <span class="sd">        :param input_size: the width and height of images fed into the autoencoder. It should be a power of 2 and</span>
@@ -133,31 +141,55 @@
             <span class="o">*</span><span class="n">_repeat_with_relu</span><span class="p">(</span><span class="n">rounds_downsampling</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_upsampling_conv_filter</span><span class="p">),</span>
         <span class="p">)</span>
 
-<div class="viewcode-block" id="AutoEncoder.forward"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.AutoEncoder.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activation</span><span class="p">):</span>
+<div class="viewcode-block" id="AutoEncoder.forward"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.AutoEncoder.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">activation</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Overrides :mod:`pl.LightningModule`.&quot;&quot;&quot;</span>
-        <span class="n">activation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">activation</span><span class="p">)</span>
-        <span class="n">activation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">activation</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">activation</span></div>
 
-<div class="viewcode-block" id="AutoEncoder.training_step"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.AutoEncoder.training_step">[docs]</a>    <span class="k">def</span> <span class="nf">training_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">batch_idx</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Overrides :mod:`pl.LightningModule`.&quot;&quot;&quot;</span>
+        <span class="c1"># Perform only the encode step when predicting.</span>
+
+        <span class="c1"># When predicting, activation is both the input tensor and another.</span>
+        <span class="c1"># This ensures only the input tensor is used</span>
+        <span class="c1"># See https://github.com/PyTorchLightning/pytorch-lightning/issues/1137</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">activation</span><span class="p">,</span> <span class="n">List</span><span class="p">):</span>
+            <span class="n">activation</span> <span class="o">=</span> <span class="n">activation</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">activation</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AutoEncoder.forward_encode_decode"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.AutoEncoder.forward_encode_decode">[docs]</a>    <span class="k">def</span> <span class="nf">forward_encode_decode</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="nb">input</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Performs both the encode and decode step on an input (batched).</span>
+
+<span class="sd">        :param input: the input tensor.</span>
+<span class="sd">        :returns: the tensor after encoding and decoding.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">temp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AutoEncoder.training_step"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.AutoEncoder.training_step">[docs]</a>    <span class="k">def</span> <span class="nf">training_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">batch_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Overrides :class:`pl.LightningModule`.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_common_step</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">batch_idx</span><span class="p">,</span> <span class="s2">&quot;train&quot;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="AutoEncoder.validation_step"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.AutoEncoder.validation_step">[docs]</a>    <span class="k">def</span> <span class="nf">validation_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">batch_idx</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Overrides :mod:`pl.LightningModule`.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="AutoEncoder.validation_step"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.AutoEncoder.validation_step">[docs]</a>    <span class="k">def</span> <span class="nf">validation_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">batch_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Overrides :class:`pl.LightningModule`.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_common_step</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">batch_idx</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="AutoEncoder.test_step"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.AutoEncoder.test_step">[docs]</a>    <span class="k">def</span> <span class="nf">test_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">batch_idx</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Overrides :mod:`pl.LightningModule`.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="AutoEncoder.test_step"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.AutoEncoder.test_step">[docs]</a>    <span class="k">def</span> <span class="nf">test_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">batch_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Overrides :class:`pl.LightningModule`.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_common_step</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">batch_idx</span><span class="p">,</span> <span class="s2">&quot;test&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AutoEncoder.predict_step"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.AutoEncoder.predict_step">[docs]</a>    <span class="k">def</span> <span class="nf">predict_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">batch_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">dataloader_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="AutoEncoder.configure_optimizers"><a class="viewcode-back" href="../../autoapi/cnn/autoencoder/index.html#cnn.autoencoder.AutoEncoder.configure_optimizers">[docs]</a>    <span class="k">def</span> <span class="nf">configure_optimizers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Overrides :mod:`pl.LightningModule`. This docstring replaces the parent docstring which is errored.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">)</span></div>
 
-    <span class="k">def</span> <span class="nf">_common_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">batch_idx</span><span class="p">,</span> <span class="n">stage</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_common_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">batch_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">stage</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
         <span class="n">x</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">batch</span>
-        <span class="n">x_hat</span> <span class="o">=</span> <span class="bp">self</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">x_hat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">x_hat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">x_hat</span><span class="p">)</span>
         <span class="n">loss</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x_hat</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;loss/</span><span class="si">{</span><span class="n">stage</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">on_step</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">loss</span>
@@ -218,7 +250,7 @@
 
 
 <span class="k">def</span> <span class="nf">_calculate_rounds_downsampling</span><span class="p">(</span><span class="n">input_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Calculates how many rounds downsamling is needed so that the input becomes :const:`BASE_IMAGE_SIZE`.</span>
+    <span class="sd">&quot;&quot;&quot;Calculates how many rounds downsampling is needed so that the input becomes :const:`BASE_IMAGE_SIZE`.</span>
 
 <span class="sd">    A check occurs that :code:`input_size` fulfills the necessary criteria.</span>
 <span class="sd">    &quot;&quot;&quot;</span>

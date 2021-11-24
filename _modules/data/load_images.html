@@ -66,6 +66,8 @@
              
   <h1>Source code for data.load_images</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Routines to load images from the file-system and split into different training, validation, test etc. datasets.&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">dataclasses</span>
+
 <span class="kn">import</span> <span class="nn">PIL.Image</span>
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torchvision</span>
@@ -73,96 +75,6 @@
 
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span>
 <span class="kn">from</span> <span class="nn">._recursive_images_dataset</span> <span class="kn">import</span> <span class="n">RecursiveImagesDataset</span>
-
-
-<div class="viewcode-block" id="load_images_split_two"><a class="viewcode-back" href="../../autoapi/data/load_images/index.html#data.load_images_split_two">[docs]</a><span class="k">def</span> <span class="nf">load_images_split_two</span><span class="p">(</span>
-    <span class="n">image_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">image_size</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
-    <span class="n">extension</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;jpg&quot;</span><span class="p">,</span>
-    <span class="n">rgb</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span><span class="p">,</span>
-    <span class="n">number_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="n">ratio_validation</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">]:</span>
-    <span class="sd">&quot;&quot;&quot;Load all images recursively from a directory, and split into *training and validation batches*.</span>
-
-<span class="sd">    :param image_directory: the image directory to load images recursively from.</span>
-<span class="sd">    :param image_size: the size (height, width) to resize all images to.</span>
-<span class="sd">    :param extension: the extension (without a leading period) that all image files must match.</span>
-<span class="sd">    :param rgb: when true, images are always loaded as RGB. when false, they are loaded as grayscale.</span>
-<span class="sd">    :param batch_size: how many images should be in a batch.</span>
-<span class="sd">    :param number_workers: the number of workers for the data-loader.</span>
-<span class="sd">    :param ratio_validation: a number between 0 and 1 determining linearly how many elements belong in the validation</span>
-<span class="sd">                             set e.g. 0.4 would try and place 40% approximately of elements into the second partition.</span>
-<span class="sd">    :returns: the loaded images, split into training and validation data respectively.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">dataset</span> <span class="o">=</span> <span class="n">_dataset</span><span class="p">(</span><span class="n">image_directory</span><span class="p">,</span> <span class="n">image_size</span><span class="p">,</span> <span class="n">extension</span><span class="p">,</span> <span class="n">rgb</span><span class="p">)</span>
-
-    <span class="n">number_first</span><span class="p">,</span> <span class="n">number_second</span> <span class="o">=</span> <span class="n">_calculate_splits</span><span class="p">(</span>
-        <span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">),</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">ratio_validation</span>
-    <span class="p">)</span>
-
-    <span class="n">train_set</span><span class="p">,</span> <span class="n">val_set</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">random_split</span><span class="p">(</span>
-        <span class="n">dataset</span><span class="p">,</span>
-        <span class="p">[</span><span class="n">number_first</span><span class="p">,</span> <span class="n">number_second</span><span class="p">],</span>
-        <span class="n">generator</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">(),</span>
-    <span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_loader</span><span class="p">(</span><span class="n">dataset</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">(</span>
-            <span class="n">dataset</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">num_workers</span><span class="o">=</span><span class="n">number_workers</span>
-        <span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">_loader</span><span class="p">(</span><span class="n">train_set</span><span class="p">),</span> <span class="n">_loader</span><span class="p">(</span><span class="n">val_set</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="load_images_split_three"><a class="viewcode-back" href="../../autoapi/data/load_images/index.html#data.load_images_split_three">[docs]</a><span class="k">def</span> <span class="nf">load_images_split_three</span><span class="p">(</span>
-    <span class="n">image_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">image_size</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
-    <span class="n">extension</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;jpg&quot;</span><span class="p">,</span>
-    <span class="n">rgb</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span><span class="p">,</span>
-    <span class="n">number_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="n">ratio_validation</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">,</span>
-    <span class="n">ratio_test</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
-    <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">,</span>
-    <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">,</span>
-    <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">,</span>
-<span class="p">]:</span>
-    <span class="sd">&quot;&quot;&quot;Load all images recursively from a directory, and split into *training, validation and test batches*.</span>
-
-<span class="sd">    :param image_directory: the image directory to load images recursively from.</span>
-<span class="sd">    :param image_size: the size (height, width) to resize all images to.</span>
-<span class="sd">    :param extension: the extension (without a leading period) that all image files must match.</span>
-<span class="sd">    :param rgb: when true, images are always loaded as RGB. when false, they are loaded as grayscale.</span>
-<span class="sd">    :param batch_size: how many images should be in a batch.</span>
-<span class="sd">    :param number_workers: the number of workers for the data-loader.</span>
-<span class="sd">    :param ratio_validation: a number between 0 and 1 determining linearly how many elements belong in the validation</span>
-<span class="sd">                             set e.g. 0.4 would try and place 40% approximately of elements into the second batch.</span>
-<span class="sd">    :param ratio_test: a number between 0 and 1 determining linearly how many elements belong in the validation</span>
-<span class="sd">                             set e.g. 0.2 would try and place 20% approximately of elements into the third batch.</span>
-<span class="sd">    :returns: the loaded images, split into training and validation data and test data respectively.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">dataset</span> <span class="o">=</span> <span class="n">_dataset</span><span class="p">(</span><span class="n">image_directory</span><span class="p">,</span> <span class="n">image_size</span><span class="p">,</span> <span class="n">extension</span><span class="p">,</span> <span class="n">rgb</span><span class="p">)</span>
-
-    <span class="n">number_images</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
-    <span class="n">_</span><span class="p">,</span> <span class="n">number_second</span> <span class="o">=</span> <span class="n">_calculate_splits</span><span class="p">(</span><span class="n">number_images</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">ratio_validation</span><span class="p">)</span>
-    <span class="n">_</span><span class="p">,</span> <span class="n">number_third</span> <span class="o">=</span> <span class="n">_calculate_splits</span><span class="p">(</span><span class="n">number_images</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">ratio_test</span><span class="p">)</span>
-    <span class="n">number_first</span> <span class="o">=</span> <span class="n">number_images</span> <span class="o">-</span> <span class="n">number_second</span> <span class="o">-</span> <span class="n">number_third</span>
-
-    <span class="n">train_set</span><span class="p">,</span> <span class="n">val_set</span><span class="p">,</span> <span class="n">test_set</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">random_split</span><span class="p">(</span>
-        <span class="n">dataset</span><span class="p">,</span>
-        <span class="p">[</span><span class="n">number_first</span><span class="p">,</span> <span class="n">number_second</span><span class="p">,</span> <span class="n">number_third</span><span class="p">],</span>
-        <span class="n">generator</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">(),</span>
-    <span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_loader</span><span class="p">(</span><span class="n">dataset</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">(</span>
-            <span class="n">dataset</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">num_workers</span><span class="o">=</span><span class="n">number_workers</span>
-        <span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">_loader</span><span class="p">(</span><span class="n">train_set</span><span class="p">),</span> <span class="n">_loader</span><span class="p">(</span><span class="n">val_set</span><span class="p">),</span> <span class="n">_loader</span><span class="p">(</span><span class="n">test_set</span><span class="p">)</span></div>
 
 
 <span class="k">class</span> <span class="nc">_UnifyNumberChannels</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -182,20 +94,114 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot;()&quot;</span>
 
 
-<span class="k">def</span> <span class="nf">_dataset</span><span class="p">(</span>
-    <span class="n">image_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">image_size</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">extension</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">rgb</span><span class="p">:</span> <span class="nb">bool</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<span class="nd">@dataclasses</span><span class="o">.</span><span class="n">dataclass</span>
+<div class="viewcode-block" id="ImageLoader"><a class="viewcode-back" href="../../autoapi/data/load_images/index.html#data.ImageLoader">[docs]</a><span class="k">class</span> <span class="nc">ImageLoader</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Loads images from the file-system.&quot;&quot;&quot;</span>
 
-    <span class="sd">&quot;&quot;&quot;Loads the images recursively into a dataset.&quot;&quot;&quot;</span>
-    <span class="n">transform</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">(</span>
-        <span class="p">[</span>
-            <span class="n">torchvision</span><span class="o">.</span><span class="n">transforms</span><span class="o">.</span><span class="n">Resize</span><span class="p">(</span><span class="n">image_size</span><span class="p">),</span>
-            <span class="n">_UnifyNumberChannels</span><span class="p">(</span><span class="n">rgb</span><span class="p">),</span>
-            <span class="n">torchvision</span><span class="o">.</span><span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">(),</span>
-        <span class="p">]</span>
-    <span class="p">)</span>
+<div class="viewcode-block" id="ImageLoader.image_directory"><a class="viewcode-back" href="../../autoapi/data/load_images/index.html#data.ImageLoader.image_directory">[docs]</a>    <span class="n">image_directory</span><span class="p">:</span> <span class="nb">str</span></div>
+    <span class="sd">&quot;&quot;&quot;The image directory to load images recursively from.&quot;&quot;&quot;</span>
 
-    <span class="k">return</span> <span class="n">RecursiveImagesDataset</span><span class="p">(</span><span class="n">image_directory</span><span class="p">,</span> <span class="n">extension</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">)</span>
+<div class="viewcode-block" id="ImageLoader.image_size"><a class="viewcode-back" href="../../autoapi/data/load_images/index.html#data.ImageLoader.image_size">[docs]</a>    <span class="n">image_size</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span></div>
+    <span class="sd">&quot;&quot;&quot;The size (height, width) to resize all images to.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ImageLoader.extension"><a class="viewcode-back" href="../../autoapi/data/load_images/index.html#data.ImageLoader.extension">[docs]</a>    <span class="n">extension</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;jpg&quot;</span></div>
+    <span class="sd">&quot;&quot;&quot;The extension (without a leading period) that all image files must match.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ImageLoader.rgb"><a class="viewcode-back" href="../../autoapi/data/load_images/index.html#data.ImageLoader.rgb">[docs]</a>    <span class="n">rgb</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span></div>
+    <span class="sd">&quot;&quot;&quot;When true, images are always loaded as RGB. when false, they are loaded as grayscale.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ImageLoader.batch_size"><a class="viewcode-back" href="../../autoapi/data/load_images/index.html#data.ImageLoader.batch_size">[docs]</a>    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span></div>
+    <span class="sd">&quot;&quot;&quot;How many images should be in a batch.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ImageLoader.num_workers"><a class="viewcode-back" href="../../autoapi/data/load_images/index.html#data.ImageLoader.num_workers">[docs]</a>    <span class="n">num_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span></div>
+    <span class="sd">&quot;&quot;&quot;The number of workers for the data-loader.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ImageLoader.load_images"><a class="viewcode-back" href="../../autoapi/data/load_images/index.html#data.ImageLoader.load_images">[docs]</a>    <span class="k">def</span> <span class="nf">load_images</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Load all images recursively from a directory.</span>
+
+<span class="sd">        :returns: a data-loader with all the images that match the extension recursively in a directory.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="ImageLoader.load_images_split_two"><a class="viewcode-back" href="../../autoapi/data/load_images/index.html#data.ImageLoader.load_images_split_two">[docs]</a>    <span class="k">def</span> <span class="nf">load_images_split_two</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">ratio_validation</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Load all images recursively from a directory, and split into *training and validation batches*.</span>
+
+<span class="sd">        :param ratio_validation: a number between 0 and 1 determining linearly how many elements belong in the</span>
+<span class="sd">                                 validation set e.g. 0.4 would try and place 40% approximately of elements into the</span>
+<span class="sd">                                 second partition.</span>
+<span class="sd">        :returns: the loaded images, split into training and validation data respectively.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="p">()</span>
+
+        <span class="n">number_first</span><span class="p">,</span> <span class="n">number_second</span> <span class="o">=</span> <span class="n">_calculate_splits</span><span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">),</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">ratio_validation</span>
+        <span class="p">)</span>
+
+        <span class="n">train_set</span><span class="p">,</span> <span class="n">val_set</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">random_split</span><span class="p">(</span>
+            <span class="n">dataset</span><span class="p">,</span>
+            <span class="p">[</span><span class="n">number_first</span><span class="p">,</span> <span class="n">number_second</span><span class="p">],</span>
+            <span class="n">generator</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">(),</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="p">(</span><span class="n">train_set</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="p">(</span><span class="n">val_set</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ImageLoader.load_images_split_three"><a class="viewcode-back" href="../../autoapi/data/load_images/index.html#data.ImageLoader.load_images_split_three">[docs]</a>    <span class="k">def</span> <span class="nf">load_images_split_three</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">ratio_validation</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">,</span>
+        <span class="n">ratio_test</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">,</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">,</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">,</span>
+    <span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Load all images recursively from a directory, and split into *training, validation and test batches*.</span>
+
+<span class="sd">        :param ratio_validation: a number between 0 and 1 determining linearly how many elements belong in the</span>
+<span class="sd">                                 validation set e.g. 0.4 would try and place 40% approximately of elements into the</span>
+<span class="sd">                                 second batch.</span>
+<span class="sd">        :param ratio_test: a number between 0 and 1 determining linearly how many elements belong in the validation</span>
+<span class="sd">                                 set e.g. 0.2 would try and place 20% approximately of elements into the third batch.</span>
+<span class="sd">        :returns: the loaded images, split into training and validation data and test data respectively.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="p">()</span>
+
+        <span class="n">number_images</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">number_second</span> <span class="o">=</span> <span class="n">_calculate_splits</span><span class="p">(</span><span class="n">number_images</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">ratio_validation</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">number_third</span> <span class="o">=</span> <span class="n">_calculate_splits</span><span class="p">(</span><span class="n">number_images</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">ratio_test</span><span class="p">)</span>
+        <span class="n">number_first</span> <span class="o">=</span> <span class="n">number_images</span> <span class="o">-</span> <span class="n">number_second</span> <span class="o">-</span> <span class="n">number_third</span>
+
+        <span class="n">train_set</span><span class="p">,</span> <span class="n">val_set</span><span class="p">,</span> <span class="n">test_set</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">random_split</span><span class="p">(</span>
+            <span class="n">dataset</span><span class="p">,</span>
+            <span class="p">[</span><span class="n">number_first</span><span class="p">,</span> <span class="n">number_second</span><span class="p">,</span> <span class="n">number_third</span><span class="p">],</span>
+            <span class="n">generator</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">(),</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="p">(</span><span class="n">train_set</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="p">(</span><span class="n">val_set</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="p">(</span><span class="n">test_set</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_loader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">(</span>
+            <span class="n">dataset</span><span class="p">,</span>
+            <span class="n">batch_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span>
+            <span class="n">shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">num_workers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">num_workers</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Loads the images that match the extension recursively into a dataset.&quot;&quot;&quot;</span>
+        <span class="n">transform</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">torchvision</span><span class="o">.</span><span class="n">transforms</span><span class="o">.</span><span class="n">Resize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">image_size</span><span class="p">),</span>
+                <span class="n">_UnifyNumberChannels</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">),</span>
+                <span class="n">torchvision</span><span class="o">.</span><span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">(),</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">RecursiveImagesDataset</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">image_directory</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">extension</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span></div>
+        <span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_calculate_splits</span><span class="p">(</span><span class="n">number_elements</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">ratio_split</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
@@ -206,12 +212,13 @@
 <span class="sd">                        0.6 would try and place 60% approximately of elements into the first partition.</span>
 <span class="sd">    :returns: the number of elements in the first and second splits respectively, which are guaranteed to sum to</span>
 <span class="sd">              :code:number_elements:.</span>
+<span class="sd">    :throws ValueError: if either split set has zero items.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">number_first</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">number_elements</span> <span class="o">*</span> <span class="n">ratio_split</span><span class="p">)</span>
     <span class="n">number_second</span> <span class="o">=</span> <span class="n">number_elements</span> <span class="o">-</span> <span class="n">number_first</span>
 
     <span class="k">if</span> <span class="n">number_first</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">number_second</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;Each dataset must have at least one item. They had respectively </span><span class="si">{</span><span class="n">number_first</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">number_second</span><span class="si">}</span><span class="s2"> items.&quot;</span>
         <span class="p">)</span>
 

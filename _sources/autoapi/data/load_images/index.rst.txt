@@ -14,46 +14,83 @@
 Module Contents
 ---------------
 
-
-Functions
-~~~~~~~~~
+Classes
+~~~~~~~
 
 .. autoapisummary::
 
-   data.load_images.load_images_split_two
-   data.load_images.load_images_split_three
+   data.load_images.ImageLoader
 
 
 
-.. py:function:: load_images_split_two(image_directory: str, image_size: Tuple[int, int], extension: str = 'jpg', rgb: bool = True, batch_size: int = 16, number_workers: int = 1, ratio_validation: float = 0.3) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]
 
-   Load all images recursively from a directory, and split into *training and validation batches*.
+.. py:class:: ImageLoader
 
-   :param image_directory: the image directory to load images recursively from.
-   :param image_size: the size (height, width) to resize all images to.
-   :param extension: the extension (without a leading period) that all image files must match.
-   :param rgb: when true, images are always loaded as RGB. when false, they are loaded as grayscale.
-   :param batch_size: how many images should be in a batch.
-   :param number_workers: the number of workers for the data-loader.
-   :param ratio_validation: a number between 0 and 1 determining linearly how many elements belong in the validation
-                            set e.g. 0.4 would try and place 40% approximately of elements into the second partition.
-   :returns: the loaded images, split into training and validation data respectively.
+   Loads images from the file-system.
+
+   .. py:attribute:: image_directory
+      :annotation: :str
+
+      The image directory to load images recursively from.
 
 
-.. py:function:: load_images_split_three(image_directory: str, image_size: Tuple[int, int], extension: str = 'jpg', rgb: bool = True, batch_size: int = 16, number_workers: int = 1, ratio_validation: float = 0.3, ratio_test: float = 0.2) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader, torch.utils.data.DataLoader]
+   .. py:attribute:: image_size
+      :annotation: :Tuple[int, int]
 
-   Load all images recursively from a directory, and split into *training, validation and test batches*.
+      The size (height, width) to resize all images to.
 
-   :param image_directory: the image directory to load images recursively from.
-   :param image_size: the size (height, width) to resize all images to.
-   :param extension: the extension (without a leading period) that all image files must match.
-   :param rgb: when true, images are always loaded as RGB. when false, they are loaded as grayscale.
-   :param batch_size: how many images should be in a batch.
-   :param number_workers: the number of workers for the data-loader.
-   :param ratio_validation: a number between 0 and 1 determining linearly how many elements belong in the validation
-                            set e.g. 0.4 would try and place 40% approximately of elements into the second batch.
-   :param ratio_test: a number between 0 and 1 determining linearly how many elements belong in the validation
-                            set e.g. 0.2 would try and place 20% approximately of elements into the third batch.
-   :returns: the loaded images, split into training and validation data and test data respectively.
+
+   .. py:attribute:: extension
+      :annotation: :str = jpg
+
+      The extension (without a leading period) that all image files must match.
+
+
+   .. py:attribute:: rgb
+      :annotation: :bool = True
+
+      When true, images are always loaded as RGB. when false, they are loaded as grayscale.
+
+
+   .. py:attribute:: batch_size
+      :annotation: :int = 16
+
+      How many images should be in a batch.
+
+
+   .. py:attribute:: num_workers
+      :annotation: :int = 1
+
+      The number of workers for the data-loader.
+
+
+   .. py:method:: load_images(self) -> torch.utils.data.DataLoader
+
+      Load all images recursively from a directory.
+
+      :returns: a data-loader with all the images that match the extension recursively in a directory.
+
+
+   .. py:method:: load_images_split_two(self, ratio_validation: float = 0.3) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]
+
+      Load all images recursively from a directory, and split into *training and validation batches*.
+
+      :param ratio_validation: a number between 0 and 1 determining linearly how many elements belong in the
+                               validation set e.g. 0.4 would try and place 40% approximately of elements into the
+                               second partition.
+      :returns: the loaded images, split into training and validation data respectively.
+
+
+   .. py:method:: load_images_split_three(self, ratio_validation: float = 0.3, ratio_test: float = 0.2) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader, torch.utils.data.DataLoader]
+
+      Load all images recursively from a directory, and split into *training, validation and test batches*.
+
+      :param ratio_validation: a number between 0 and 1 determining linearly how many elements belong in the
+                               validation set e.g. 0.4 would try and place 40% approximately of elements into the
+                               second batch.
+      :param ratio_test: a number between 0 and 1 determining linearly how many elements belong in the validation
+                               set e.g. 0.2 would try and place 20% approximately of elements into the third batch.
+      :returns: the loaded images, split into training and validation data and test data respectively.
+
 
 
