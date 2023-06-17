@@ -1,0 +1,13 @@
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+
+  build:
+    uses: anchoranalysis/anchor-python-cicd/.github/workflows/push_master.yml@main
+    with:
+      library-name: anchor-python-training
+    secrets: inherit

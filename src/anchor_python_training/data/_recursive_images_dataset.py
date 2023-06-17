@@ -1,12 +1,13 @@
 import PIL
 import pathlib
 import torch
+from typing import Optional, Any
 
 
 class RecursiveImagesDataset(torch.utils.data.Dataset):
     """Finds images in a particular directory recursively."""
 
-    def __init__(self, image_directory: str, extension: str, transform=None):
+    def __init__(self, image_directory: str, extension: str, transform: Optional[Any] = None):
         """Creates for a particular directory and file extension.
 
         :param image_directory: the directory to search for images recursively in.
